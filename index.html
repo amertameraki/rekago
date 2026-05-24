@@ -246,6 +246,59 @@ nav {
 
 </div>
 
+<!-- SPLASH SCREEN -->
+<div id="splash" style="
+  position:fixed;inset:0;z-index:500;
+  background:#403919;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  transition:opacity 0.5s ease;
+">
+  <div id="splashWord" style="
+    font-family:'DM Serif Display',serif;font-size:56px;color:#F2BB16;
+    letter-spacing:-1px;opacity:0;transform:translateY(8px);
+    transition:opacity 0.6s ease,transform 0.6s ease;
+  ">Rekago</div>
+  <div id="splashSub" style="
+    font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;
+    color:rgba(242,187,22,0.4);opacity:0;
+    transition:opacity 0.5s ease 0.3s;
+  ">재고 · Inventory</div>
+  <div id="splashTag" style="
+    font-size:13px;color:rgba(242,187,22,0.55);margin-top:4px;opacity:0;
+    transition:opacity 0.5s ease 0.5s;
+  ">Inventory, rekapped.</div>
+</div>
+
+<!-- TOOLTIP TOUR -->
+<div id="tourOverlay" style="display:none;position:fixed;inset:0;z-index:400;pointer-events:none;"></div>
+<div id="tourBox" style="
+  display:none;position:fixed;z-index:401;
+  background:#403919;color:#FDFAF3;
+  border:1px solid rgba(242,187,22,0.25);border-radius:10px;
+  padding:14px 18px;width:260px;
+  box-shadow:0 4px 24px rgba(64,57,25,0.25);
+  pointer-events:auto;
+">
+  <div style="font-size:10px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:rgba(242,187,22,0.5);margin-bottom:4px" id="tourStep"></div>
+  <div style="font-size:13px;font-weight:600;color:#F2BB16;margin-bottom:4px" id="tourTitle"></div>
+  <div style="font-size:12px;color:rgba(253,250,243,0.7);line-height:1.5;margin-bottom:14px" id="tourBody"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;gap:5px" id="tourDots"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="skipTour()" style="background:none;border:none;font-size:11px;color:rgba(253,250,243,0.35);cursor:pointer;padding:0">Skip</button>
+      <button onclick="tourNext()" id="tourNextBtn" style="
+        background:#F2BB16;color:#403919;border:none;
+        font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;
+      ">Next</button>
+    </div>
+  </div>
+  <div id="tourArrow" style="
+    position:absolute;width:10px;height:10px;background:#403919;
+    border-left:1px solid rgba(242,187,22,0.25);border-top:1px solid rgba(242,187,22,0.25);
+    transform:rotate(45deg);
+  "></div>
+</div>
+
 <!-- TRY LIVE MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
@@ -290,13 +343,19 @@ const REKAGO = {
 const PAGE_CACHE = {};
 
 async function loadPage(name) {
-  // Update nav active state
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  // Update nav active state — event may be undefined on auto-load
+  if (typeof event !== 'undefined' && event && event.currentTarget) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  } else {
+    document.querySelectorAll('.nav-tab').forEach(t => {
+      t.classList.toggle('active', t.getAttribute('onclick') && t.getAttribute('onclick').includes("'" + name + "'"));
+    });
+  }
 
   // Load HTML if not cached
   if (!PAGE_CACHE[name]) {
-    const res  = await fetch(name + '.html');
+    const res        = await fetch(name + '.html');
     PAGE_CACHE[name] = await res.text();
   }
 
@@ -528,14 +587,192 @@ const SHARED_CSS = `
 `;
 
 // ============================================================
-// BOOT — load dashboard on first visit
+// BOOT — splash → dashboard → tour
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
-  // Inject shared CSS into head
   document.head.insertAdjacentHTML('beforeend', SHARED_CSS);
-  // Load dashboard as default page
-  loadPage('dashboard');
+  runSplash();
 });
+
+function runSplash() {
+  const splash   = document.getElementById('splash');
+  const word     = document.getElementById('splashWord');
+  const sub      = document.getElementById('splashSub');
+  const tag      = document.getElementById('splashTag');
+
+  // Animate in
+  requestAnimationFrame(() => {
+    word.style.opacity   = '1';
+    word.style.transform = 'translateY(0)';
+    sub.style.opacity    = '1';
+    tag.style.opacity    = '1';
+  });
+
+  // After 2s — fade out splash, load dashboard
+  setTimeout(() => {
+    splash.style.opacity = '0';
+    splash.style.pointerEvents = 'none';
+    loadPage('dashboard').then(() => {
+      setTimeout(() => {
+        splash.style.display = 'none';
+        maybeStartTour();
+      }, 500);
+    });
+  }, 2000);
+}
+
+// ============================================================
+// TOOLTIP TOUR — first visit only
+// ============================================================
+const TOUR_KEY = 'rekago_tour_done';
+
+const TOUR_STEPS = [
+  {
+    title:  'Dashboard',
+    body:   'Your inventory at a glance. SKU counts, low stock alerts, and revenue vs orders — all updated live when connected.',
+    target: () => document.querySelector('.nav-tab[onclick*="dashboard"]'),
+    pos:    'below',
+  },
+  {
+    title:  'SKU Overview',
+    body:   'Each row is one product family. The bar shows stock level — orange means below reorder threshold.',
+    target: () => document.getElementById('skuTableBody')?.closest('.card'),
+    pos:    'right',
+  },
+  {
+    title:  'Revenue & Orders chart',
+    body:   'Bars track revenue (Rp), the line tracks order count. Switch between Week and Month view.',
+    target: () => document.querySelector('.period-btn'),
+    pos:    'below',
+  },
+  {
+    title:  'Products',
+    body:   'Add SKUs, manage categories and channels, track cost vs unit price per product.',
+    target: () => document.querySelector('.nav-tab[onclick*="products"]'),
+    pos:    'below',
+  },
+  {
+    title:  'Stock In & Out',
+    body:   'Record every inbound delivery and outbound sale. Stock counts update automatically.',
+    target: () => document.querySelector('.nav-tab[onclick*="stockin"]'),
+    pos:    'below',
+  },
+  {
+    title:  'Try Live',
+    body:   'Enter your email to connect your own Google Sheet. Your data stays private — Rekago never stores it.',
+    target: () => document.getElementById('btnTryLive'),
+    pos:    'below-left',
+  },
+];
+
+let tourIndex = 0;
+
+function maybeStartTour() {
+  if (localStorage.getItem(TOUR_KEY)) return;
+  tourIndex = 0;
+  showTourStep();
+}
+
+function showTourStep() {
+  const step   = TOUR_STEPS[tourIndex];
+  const target = step.target();
+  const box    = document.getElementById('tourBox');
+  const arrow  = document.getElementById('tourArrow');
+
+  if (!target) { tourNext(); return; }
+
+  // Populate content
+  document.getElementById('tourStep').textContent  = (tourIndex + 1) + ' of ' + TOUR_STEPS.length;
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourBody').textContent  = step.body;
+  document.getElementById('tourNextBtn').textContent =
+    tourIndex === TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+
+  // Dots
+  const dots = document.getElementById('tourDots');
+  dots.innerHTML = TOUR_STEPS.map((_, i) =>
+    `<div style="width:6px;height:6px;border-radius:50%;background:${i===tourIndex?'#F2BB16':'rgba(242,187,22,0.2)'}"></div>`
+  ).join('');
+
+  box.style.display = 'block';
+
+  // Position relative to target
+  const r   = target.getBoundingClientRect();
+  const bw  = 260;
+  const bh  = box.offsetHeight || 160;
+  const gap = 12;
+  let top, left;
+
+  arrow.style.top    = '';
+  arrow.style.bottom = '';
+  arrow.style.left   = '';
+  arrow.style.right  = '';
+
+  if (step.pos === 'below' || step.pos === 'below-left') {
+    top  = r.bottom + gap;
+    left = step.pos === 'below-left'
+         ? Math.min(r.right - bw, window.innerWidth - bw - 16)
+         : r.left;
+    left = Math.max(8, left);
+    arrow.style.top  = '-6px';
+    arrow.style.left = Math.min(r.left + r.width / 2 - left - 5, bw - 20) + 'px';
+    arrow.style.transform = 'rotate(45deg)';
+    arrow.style.borderLeft = '1px solid rgba(242,187,22,0.25)';
+    arrow.style.borderTop  = '1px solid rgba(242,187,22,0.25)';
+    arrow.style.borderRight  = 'none';
+    arrow.style.borderBottom = 'none';
+  } else if (step.pos === 'right') {
+    top  = r.top + r.height / 2 - bh / 2;
+    left = r.right + gap;
+    if (left + bw > window.innerWidth - 8) left = r.left - bw - gap;
+    arrow.style.top    = (bh / 2 - 5) + 'px';
+    arrow.style.left   = '-6px';
+    arrow.style.transform = 'rotate(-45deg)';
+    arrow.style.borderLeft = '1px solid rgba(242,187,22,0.25)';
+    arrow.style.borderBottom = '1px solid rgba(242,187,22,0.25)';
+    arrow.style.borderTop  = 'none';
+    arrow.style.borderRight = 'none';
+  }
+
+  // Clamp vertically
+  top = Math.max(60, Math.min(top, window.innerHeight - bh - 16));
+
+  box.style.top  = top  + 'px';
+  box.style.left = left + 'px';
+
+  // Highlight target
+  target.style.outline       = '2px solid #F2BB16';
+  target.style.outlineOffset = '3px';
+  target.style.borderRadius  = '4px';
+  target._tourHighlighted    = true;
+}
+
+function clearHighlight() {
+  TOUR_STEPS.forEach(s => {
+    const t = s.target();
+    if (t && t._tourHighlighted) {
+      t.style.outline      = '';
+      t.style.outlineOffset = '';
+      t._tourHighlighted   = false;
+    }
+  });
+}
+
+function tourNext() {
+  clearHighlight();
+  tourIndex++;
+  if (tourIndex >= TOUR_STEPS.length) {
+    skipTour();
+  } else {
+    showTourStep();
+  }
+}
+
+function skipTour() {
+  clearHighlight();
+  document.getElementById('tourBox').style.display = 'none';
+  localStorage.setItem(TOUR_KEY, '1');
+}
 </script>
 </body>
 </html>
