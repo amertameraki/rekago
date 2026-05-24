@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rekago — Inventory, rekapped</title>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  --bg:       #FDFAF3;
+  --nav:      #403919;
+  --gold:     #F2BB16;
+  --amber:    #BF9E3B;
+  --warn:     #A6600A;
+  --ok:       #5C8A1A;
+  --danger:   #C0392B;
+  --surface:  #FFFFFF;
+  --border:   rgba(191,158,59,0.2);
+  --text:     #403919;
+  --muted:    rgba(64,57,25,0.5);
+
+  --ch-tokopedia: #E05E1E;
+  --ch-shopee:    #D0001B;
+  --ch-tiktok:    #1DAB52;
+  --ch-direct:    #1A6A9A;
+
+  --radius:   8px;
+  --shadow:   0 1px 4px rgba(64,57,25,0.08);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: 13px; }
+a { color: inherit; text-decoration: none; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ============================================================
+   NAV
+   ============================================================ */
+nav {
+  background: var(--nav);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  height: 48px;
+  gap: 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 110px;
+}
+.nav-brand-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px;
+  color: var(--gold);
+  letter-spacing: -0.3px;
+}
+.nav-brand-sub {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(242,187,22,0.45);
+}
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+}
+.nav-tab {
+  background: none;
+  border: none;
+  color: rgba(242,187,22,0.55);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-tab:hover { color: var(--gold); background: rgba(242,187,22,0.07); }
+.nav-tab.active { color: var(--nav); background: var(--gold); font-weight: 600; }
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  justify-content: flex-end;
+}
+.lang-btn {
+  background: none;
+  border: none;
+  color: rgba(242,187,22,0.5);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.lang-btn:hover, .lang-btn.active { color: var(--gold); }
+.demo-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--warn);
+  background: rgba(166,96,10,0.12);
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.btn-trylive {
+  background: var(--gold);
+  color: var(--nav);
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: opacity 0.15s;
+}
+.btn-trylive:hover { opacity: 0.88; }
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ok);
+  font-weight: 600;
+}
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+main { flex: 1; padding: 24px; max-width: 1280px; margin: 0 auto; width: 100%; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.page-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 24px;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.page-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ============================================================
+   DEMO GATE BANNER
+   ============================================================ */
+.demo-gate {
+  background: rgba(242,187,22,0.07);
+  border: 1px solid rgba(242,187,22,0.25);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+.demo-gate-text strong { font-weight: 600; font-size: 13px; color: var(--text); }
+.demo-gate-text p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.demo-gate-right { display: flex; align-items: center; gap: 8px; }
+.demo-gate input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--text);
+  width: 200px;
+  outline: none;
+  transition: border 0.15s;
+}
+.demo-gate input:focus { border-color: var(--amber); }
+.btn-unlock {
+  background: var(--gold);
+  color: var(--nav);
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   METRIC CARDS
+   ============================================================ */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+}
+.metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 6px;
+}
+.metric-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.metric-sub { font-size: 11px; color: var(--muted); }
+.metric-card.warn { border-left: 3px solid var(--warn); }
+.metric-card.ok   { border-left: 3px solid var(--ok); }
+
+/* ============================================================
+   DASHBOARD GRID
+   ============================================================ */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.card-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.card-body { padding: 16px 18px; }
+
+/* ============================================================
+   SKU OVERVIEW TABLE
+   ============================================================ */
+.sku-table { width: 100%; border-collapse: collapse; }
+.sku-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--amber);
+  padding: 0 0 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.sku-table th:not(:first-child) { padding-left: 12px; }
+.sku-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(191,158,59,0.08);
+  vertical-align: middle;
+}
+.sku-table td:not(:first-child) { padding-left: 12px; }
+.sku-table tr:last-child td { border-bottom: none; }
+.sku-id {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  font-weight: 600;
+}
+.sku-name { font-size: 13px; font-weight: 500; }
+
+/* Stock bar */
+.stock-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.stock-bar-bg {
+  width: 80px; height: 4px;
+  background: rgba(191,158,59,0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.stock-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--gold);
+  transition: width 0.4s ease;
+}
+.stock-bar-fill.warn { background: var(--warn); }
+.stock-num { font-size: 12px; font-weight: 500; color: var(--text); min-width: 24px; }
+
+/* Status pill */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.status-pill.in-stock  { background: rgba(92,138,26,0.1);  color: var(--ok);   }
+.status-pill.low-stock { background: rgba(166,96,10,0.1);  color: var(--warn); }
+.status-pill.out       { background: rgba(192,57,43,0.1);  color: var(--danger); }
+
+/* Badge */
+.badge-warn {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(166,96,10,0.1);
+  color: var(--warn);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   REVENUE & ORDERS CHART
+   ============================================================ */
+.period-toggle { display: flex; gap: 4px; }
+.period-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 5px;
+  transition: all 0.15s;
+}
+.period-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--nav);
+}
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  padding: 8px 18px 0;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.legend-swatch {
+  width: 12px; height: 10px;
+  border-radius: 2px;
+  background: rgba(242,187,22,0.72);
+}
+.legend-line {
+  width: 18px; height: 2px;
+  background: var(--nav);
+  position: relative;
+}
+.legend-line::after {
+  content: '';
+  position: absolute;
+  right: -1px; top: -3px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--nav);
+  border: 1.5px solid var(--bg);
+}
+.chart-wrap { padding: 8px 16px 16px; }
+
+/* ============================================================
+   PRODUCTS PAGE
+   ============================================================ */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  width: 220px;
+  transition: border 0.15s;
+}
+.search-input:focus { border-color: var(--amber); }
+.cat-pill {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  transition: all 0.15s;
+}
+.cat-pill:hover, .cat-pill.active {
+  border-color: var(--gold);
+  color: var(--text);
+  background: rgba(242,187,22,0.08);
+}
+
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--amber);
+  padding: 10px 14px;
+  text-align: left;
+  background: rgba(191,158,59,0.05);
+  border-bottom: 1px solid var(--border);
+}
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(191,158,59,0.08);
+  vertical-align: middle;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: rgba(242,187,22,0.03); }
+
+/* Channel pills */
+.channel-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin: 1px 2px 1px 0;
+  color: #fff;
+}
+.ch-tokopedia { background: var(--ch-tokopedia); }
+.ch-shopee    { background: var(--ch-shopee); }
+.ch-tiktok    { background: var(--ch-tiktok); }
+.ch-direct    { background: var(--ch-direct); }
+
+/* ============================================================
+   FORMS
+   ============================================================ */
+.form-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.form-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.form-grid-4 { grid-template-columns: repeat(4, 1fr); }
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+.form-field.full { grid-column: 1 / -1; }
+.form-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.form-input, .form-select, .form-textarea {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border 0.15s;
+  width: 100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--amber);
+  background: var(--surface);
+}
+.form-textarea { resize: vertical; min-height: 72px; }
+.checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 2px; }
+.checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+.checkbox-item input { cursor: pointer; accent-color: var(--gold); }
+.form-actions { margin-top: 16px; display: flex; gap: 10px; }
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--nav);
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 20px;
+  border-radius: 6px;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.88; }
+.btn-secondary {
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 18px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.btn-secondary:hover { border-color: var(--amber); color: var(--text); }
+
+/* ============================================================
+   MODAL — TRY LIVE
+   ============================================================ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(64,57,25,0.45);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 32px;
+  width: 400px;
+  box-shadow: 0 8px 40px rgba(64,57,25,0.18);
+}
+.modal-brand {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.modal-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+.modal-field { margin-bottom: 16px; }
+.modal-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 6px;
+  display: block;
+}
+.modal-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border 0.15s;
+}
+.modal-input:focus { border-color: var(--amber); }
+.modal-error {
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: 8px;
+  min-height: 16px;
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-modal-primary {
+  flex: 1;
+  background: var(--gold);
+  color: var(--nav);
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px;
+  border-radius: 8px;
+  transition: opacity 0.15s;
+}
+.btn-modal-primary:hover { opacity: 0.88; }
+.btn-modal-secondary {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 11px 18px;
+  border-radius: 8px;
+}
+.modal-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 16px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+.empty-state p { font-size: 13px; margin-top: 4px; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--nav);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(64,57,25,0.2);
+  z-index: 300;
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.25s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { background: var(--danger); color: #fff; }
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+.text-muted  { color: var(--muted); }
+.text-ok     { color: var(--ok); }
+.text-warn   { color: var(--warn); }
+.text-danger { color: var(--danger); }
+.mono        { font-family: 'Courier New', monospace; font-size: 11px; color: var(--amber); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ============================================================
+     NAV
+     ============================================================ -->
+<nav>
+  <div class="nav-brand">
+    <span class="nav-brand-name">Rekago</span>
+    <span class="nav-brand-sub">재고 · Inventory</span>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-tab" onclick="showPage('products')">Products</button>
+    <button class="nav-tab" onclick="showPage('stockin')">Stock In</button>
+    <button class="nav-tab" onclick="showPage('stockout')">Stock Out</button>
+    <button class="nav-tab" onclick="showPage('salesorders')">Sales Orders</button>
+  </div>
+
+  <div class="nav-right">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('id')">ID</button>
+    <button class="lang-btn" onclick="setLang('ko')">한국어</button>
+    <span class="demo-badge" id="modeBadge">DEMO</span>
+    <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Live</button>
+    <div class="live-indicator" id="liveIndicator" style="display:none">
+      <span class="live-dot"></span>
+      <span>Live</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================================================
+     MAIN
+     ============================================================ -->
+<main>
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <div class="page-title" data-key="nav.dashboard">Dashboard</div>
+        <div class="page-meta" id="lastSynced">Last updated: Today, demo mode</div>
+      </div>
+    </div>
+
+    <!-- Demo gate -->
+    <div class="demo-gate" id="demoGate">
+      <div class="demo-gate-text">
+        <strong data-key="gate.title">Want to edit data?</strong>
+        <p data-key="gate.sub">Enter your email to unlock editing in this demo session</p>
+      </div>
+      <div class="demo-gate-right">
+        <input type="email" id="gateEmail" placeholder="your@email.com">
+        <button class="btn-unlock" onclick="unlockEdit()" data-key="btn.unlock">Unlock</button>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-label" data-key="m.totalskus">Total SKUs</div>
+        <div class="metric-value" id="metricSkus">3</div>
+        <div class="metric-sub" data-key="m.skusactive">SKUs active</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label" data-key="m.totalitems">Total Items</div>
+        <div class="metric-value" id="metricItems">5</div>
+        <div class="metric-sub" data-key="m.variantstracked">variants tracked</div>
+      </div>
+      <div class="metric-card warn">
+        <div class="metric-label" data-key="m.lowstock">Low Stock</div>
+        <div class="metric-value" id="metricLow">1</div>
+        <div class="metric-sub" data-key="m.needrestock">SKU needs restock</div>
+      </div>
+      <div class="metric-card ok">
+        <div class="metric-label" data-key="m.movedweek">Sold This Week</div>
+        <div class="metric-value" id="metricSold">22</div>
+        <div class="metric-sub" data-key="m.unitsout">units out</div>
+      </div>
+    </div>
+
+    <!-- Dash grid: SKU Overview + Chart -->
+    <div class="dash-grid">
+
+      <!-- SKU Overview -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-label" data-key="dash.skuoverview">SKU Overview</span>
+          <span class="badge-warn" id="lowBadge">1 low</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table class="sku-table" style="padding:0 18px">
+            <thead>
+              <tr style="padding:0 18px">
+                <th style="padding-left:18px" data-key="col.sku">SKU</th>
+                <th data-key="col.product">Product Name</th>
+                <th data-key="col.stock">Stock</th>
+                <th data-key="col.status">Status</th>
+              </tr>
+            </thead>
+            <tbody id="skuTableBody" style=""></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Revenue & Orders Chart -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-label" data-key="dash.revenueorders">Revenue & Orders</span>
+          <div class="period-toggle">
+            <button class="period-btn active" onclick="setPeriod('week')" data-key="filter.week">Week</button>
+            <button class="period-btn" onclick="setPeriod('month')" data-key="filter.month">Month</button>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <span class="legend-swatch"></span>
+            <span data-key="legend.revenue">Revenue (Rp)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-line"></span>
+            <span data-key="legend.orders">Orders</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="revenueChart" height="200" role="img" aria-label="Revenue and Orders chart"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div class="page" id="page-products">
+    <div class="page-header">
+      <div class="page-title" data-key="nav.products">Products</div>
+    </div>
+
+    <div class="form-section" id="addProductForm">
+      <div class="form-section-title" data-key="btn.addproduct">Add Product</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label">SKU ID</label>
+          <input class="form-input" id="fpSkuId" placeholder="e.g. BLM-004">
+        </div>
+        <div class="form-field">
+          <label class="form-label" data-key="col.product">Product Name</label>
+          <input class="form-input" id="fpSkuName" placeholder="e.g. Rattan Basket">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="fpCategory">
+            <option>Gift Set</option>
+            <option>Single Item</option>
+            <option>Multiple Item</option>
+            <option>Bundle</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Unit Price (IDR)</label>
+          <input class="form-input" id="fpUnitPrice" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Cost Price (IDR)</label>
+          <input class="form-input" id="fpCostPrice" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Reorder Threshold</label>
+          <input class="form-input" id="fpReorder" type="number" placeholder="10">
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Channels</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" value="Tokopedia"> Tokopedia</label>
+            <label class="checkbox-item"><input type="checkbox" value="Shopee"> Shopee</label>
+            <label class="checkbox-item"><input type="checkbox" value="TikTok Shop"> TikTok Shop</label>
+            <label class="checkbox-item"><input type="checkbox" value="Direct"> Direct</label>
+          </div>
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Notes</label>
+          <input class="form-input" id="fpNotes" placeholder="Optional notes">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="submitAddProduct()" data-key="btn.addproduct">Add Product</button>
+        <button class="btn-secondary" onclick="toggleForm('addProductForm')">Cancel</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input class="search-input" placeholder="Search products..." id="productSearch" oninput="renderProductsTable()">
+      <button class="cat-pill active" onclick="filterCat(this, '')" data-key="filter.all">All</button>
+      <button class="cat-pill" onclick="filterCat(this, 'Gift Set')">Gift Set</button>
+      <button class="cat-pill" onclick="filterCat(this, 'Single Item')">Single Item</button>
+      <button class="cat-pill" onclick="filterCat(this, 'Bundle')">Bundle</button>
+    </div>
+
+    <div class="card">
+      <table class="data-table" id="productsTable">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th data-key="col.product">Product Name</th>
+            <th>Category</th>
+            <th>Channels</th>
+            <th>Unit Price</th>
+            <th data-key="col.stock">Stock</th>
+            <th data-key="col.status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="productsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- STOCK IN -->
+  <div class="page" id="page-stockin">
+    <div class="page-header">
+      <div class="page-title" data-key="nav.stockin">Stock In</div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title" data-key="btn.stockin">Record Stock In</div>
+      <div class="form-grid form-grid-4">
+        <div class="form-field">
+          <label class="form-label">Date</label>
+          <input class="form-input" id="siDate" type="date">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Reference ID</label>
+          <input class="form-input" id="siRefId" placeholder="PL-2026-005">
+        </div>
+        <div class="form-field">
+          <label class="form-label">SKU</label>
+          <select class="form-select" id="siSkuId" onchange="populateItems('siSkuId','siItemId')"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Item</label>
+          <select class="form-select" id="siItemId"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Supplier</label>
+          <input class="form-input" id="siSupplier" placeholder="Supplier name">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Qty In</label>
+          <input class="form-input" id="siQty" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Unit Cost (IDR)</label>
+          <input class="form-input" id="siUnitCost" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="siType">
+            <option>Restock</option>
+            <option>Initial Stock</option>
+            <option>Return Inbound</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Notes</label>
+          <input class="form-input" id="siNotes" placeholder="Optional">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="submitStockIn()" data-key="btn.stockin">Record Stock In</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Ref ID</th>
+            <th>SKU</th>
+            <th>Item</th>
+            <th>Supplier</th>
+            <th>Qty</th>
+            <th>Unit Cost</th>
+            <th>Total Cost</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="stockInBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- STOCK OUT -->
+  <div class="page" id="page-stockout">
+    <div class="page-header">
+      <div class="page-title" data-key="nav.stockout">Stock Out</div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title" data-key="btn.stockout">Record Stock Out</div>
+      <div class="form-grid form-grid-4">
+        <div class="form-field">
+          <label class="form-label">Date</label>
+          <input class="form-input" id="soDate" type="date">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Reference ID</label>
+          <input class="form-input" id="soRefId" placeholder="SO-2026-010">
+        </div>
+        <div class="form-field">
+          <label class="form-label">SKU</label>
+          <select class="form-select" id="soSkuId" onchange="populateItems('soSkuId','soItemId')"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Item</label>
+          <select class="form-select" id="soItemId"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Channel</label>
+          <select class="form-select" id="soChannel">
+            <option>Tokopedia</option>
+            <option>Shopee</option>
+            <option>TikTok Shop</option>
+            <option>Direct</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Order Reference</label>
+          <input class="form-input" id="soOrderRef" placeholder="e.g. TTK-0500">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Qty Out</label>
+          <input class="form-input" id="soQty" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Unit Price (IDR)</label>
+          <input class="form-input" id="soUnitPrice" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="soType">
+            <option>Sold</option>
+            <option>Marketing Sample</option>
+            <option>Damaged</option>
+            <option>Return Inbound</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Notes</label>
+          <input class="form-input" id="soNotes" placeholder="Optional">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="submitStockOut()" data-key="btn.stockout">Record Stock Out</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Ref ID</th>
+            <th>SKU</th>
+            <th>Item</th>
+            <th>Channel</th>
+            <th>Qty</th>
+            <th>Revenue</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="stockOutBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SALES ORDERS -->
+  <div class="page" id="page-salesorders">
+    <div class="page-header">
+      <div class="page-title" data-key="nav.salesorders">Sales Orders</div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title" data-key="btn.neworder">New Order</div>
+      <div class="form-grid form-grid-4">
+        <div class="form-field">
+          <label class="form-label">SO Number</label>
+          <input class="form-input" id="nsoNum" placeholder="SO-2026-010">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Date</label>
+          <input class="form-input" id="nsoDate" type="date">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Channel</label>
+          <select class="form-select" id="nsoChannel">
+            <option>Tokopedia</option>
+            <option>Shopee</option>
+            <option>TikTok Shop</option>
+            <option>Direct</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Customer Ref</label>
+          <input class="form-input" id="nsoCustRef" placeholder="e.g. TTK-0500">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Total Qty</label>
+          <input class="form-input" id="nsoQty" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Total Revenue (IDR)</label>
+          <input class="form-input" id="nsoRevenue" type="number" placeholder="0">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="nsoStatus">
+            <option>Pending</option>
+            <option>Fulfilled</option>
+            <option>Cancelled</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Notes</label>
+          <input class="form-input" id="nsoNotes" placeholder="Optional">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="submitNewOrder()" data-key="btn.neworder">Create Order</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input class="search-input" placeholder="Search orders..." id="orderSearch" oninput="renderOrdersTable()">
+      <button class="cat-pill active" onclick="filterChannel(this, '')">All</button>
+      <button class="cat-pill" onclick="filterChannel(this, 'Tokopedia')">Tokopedia</button>
+      <button class="cat-pill" onclick="filterChannel(this, 'Shopee')">Shopee</button>
+      <button class="cat-pill" onclick="filterChannel(this, 'TikTok Shop')">TikTok Shop</button>
+      <button class="cat-pill" onclick="filterChannel(this, 'Direct')">Direct</button>
+    </div>
+
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SO Number</th>
+            <th>Date</th>
+            <th>Channel</th>
+            <th>Customer Ref</th>
+            <th>Qty</th>
+            <th>Revenue</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- TRY LIVE MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-brand">Rekago</div>
+    <div class="modal-title" data-key="modal.title">Connect to your inventory</div>
+    <div class="modal-sub" data-key="modal.sub">Enter your email to access live data from your Google Sheet. Your sheet stays private — Rekago never stores your data.</div>
+    <div class="modal-field">
+      <label class="modal-label" data-key="modal.emaillabel">Your Email</label>
+      <input class="modal-input" id="modalEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')submitLogin()">
+      <div class="modal-error" id="modalError"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal-primary" id="btnLogin" onclick="submitLogin()" data-key="modal.connect">Connect</button>
+    </div>
+    <div class="modal-note" data-key="modal.note">Don't have access yet? Contact the sheet owner to be added as an authorized user.</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  mode: 'demo',       // 'demo' | 'live'
+  email: null,
+  lang: 'en',
+  skus: [],
+  items: [],
+  stockIn: [],
+  stockOut: [],
+  salesOrders: [],
+  activeCatFilter: '',
+  activeChannelFilter: '',
+  revenueChart: null,
+  chartPeriod: 'week',
+};
+
+// ============================================================
+// MOCK DATA
+// ============================================================
+const MOCK = {
+  skus: [
+    { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat','Category':'Single Item','Channels':'Tokopedia, TikTok Shop','Unit Price (IDR)':85000,'Cost Price (IDR)':42000,'Reorder Threshold':20,'Current Stock':84,'SKU Status':'In Stock','Notes':'Natural fiber, handwoven' },
+    { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin','Category':'Single Item','Channels':'Shopee, TikTok Shop, Direct','Unit Price (IDR)':45000,'Cost Price (IDR)':18000,'Reorder Threshold':15,'Current Stock':56,'SKU Status':'In Stock','Notes':'Set of 2' },
+    { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set','Category':'Gift Set','Channels':'Tokopedia, Shopee','Unit Price (IDR)':120000,'Cost Price (IDR)':58000,'Reorder Threshold':10,'Current Stock':8,'SKU Status':'Low Stock','Notes':'Bundle SKU' },
+  ],
+  items: [
+    { 'Item ID':'BLM-001-NAT','SKU ID':'BLM-001','Item Name':'Rattan Placemat — Natural','Variant':'Color','Variant Value':'Natural','Item Status':'In Sell' },
+    { 'Item ID':'BLM-001-DRK','SKU ID':'BLM-001','Item Name':'Rattan Placemat — Dark','Variant':'Color','Variant Value':'Dark Brown','Item Status':'Listed' },
+    { 'Item ID':'BLM-002-CRM','SKU ID':'BLM-002','Item Name':'Linen Napkin — Cream','Variant':'Color','Variant Value':'Cream','Item Status':'In Sell' },
+    { 'Item ID':'BLM-002-SND','SKU ID':'BLM-002','Item Name':'Linen Napkin — Sand','Variant':'Color','Variant Value':'Sand','Item Status':'In Sell' },
+    { 'Item ID':'BLM-003-GFT','SKU ID':'BLM-003','Item Name':'Rattan + Napkin Gift Set','Variant':'Bundle','Variant Value':'Natural + Cream','Item Status':'Low Stock' },
+  ],
+  stockIn: [
+    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Product Name':'Rattan Placemat — Natural','Supplier Name':'Supplier Rattan Jakarta','Qty In':40,'Unit Cost (IDR)':22000,'Total Cost (IDR)':880000,'Type':'Restock' },
+    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Product Name':'Rattan Placemat — Dark','Supplier Name':'Supplier Rattan Jakarta','Qty In':20,'Unit Cost (IDR)':22000,'Total Cost (IDR)':440000,'Type':'Restock' },
+    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Product Name':'Linen Napkin — Cream','Supplier Name':'Supplier Tekstil Bandung','Qty In':30,'Unit Cost (IDR)':9000,'Total Cost (IDR)':270000,'Type':'Initial Stock' },
+  ],
+  stockOut: [
+    { Date:'2026-05-23','Reference ID':'SO-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Product Name':'Rattan Placemat — Natural','Channel':'TikTok Shop','Order Reference':'TTK-0482','Qty Out':6,'Unit Price (IDR)':85000,'Total Revenue (IDR)':510000,'Type':'Sold' },
+    { Date:'2026-05-24','Reference ID':'SO-2026-002','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Product Name':'Linen Napkin — Cream','Channel':'Shopee','Order Reference':'SHP-2291','Qty Out':12,'Unit Price (IDR)':45000,'Total Revenue (IDR)':540000,'Type':'Sold' },
+    { Date:'2026-05-22','Reference ID':'MKT-001','SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Product Name':'Rattan + Napkin Gift Set','Channel':'Direct','Order Reference':'WA-ORDER','Qty Out':4,'Unit Price (IDR)':120000,'Total Revenue (IDR)':480000,'Type':'Sold' },
+  ],
+  salesOrders: [
+    { 'SO Number':'SO-2026-001',Date:'2026-05-23',Channel:'TikTok Shop','Customer Ref':'TTK-0482','Total Qty':6,'Total Revenue (IDR)':510000,Status:'Fulfilled' },
+    { 'SO Number':'SO-2026-002',Date:'2026-05-24',Channel:'Shopee','Customer Ref':'SHP-2291','Total Qty':12,'Total Revenue (IDR)':540000,Status:'Fulfilled' },
+    { 'SO Number':'SO-2026-003',Date:'2026-05-24',Channel:'Tokopedia','Customer Ref':'TOK-1182','Total Qty':10,'Total Revenue (IDR)':850000,Status:'Pending' },
+    { 'SO Number':'SO-2026-004',Date:'2026-05-22',Channel:'Direct','Customer Ref':'WA-ORDER','Total Qty':4,'Total Revenue (IDR)':480000,Status:'Fulfilled' },
+  ],
+  chart: {
+    week:  { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], revenue:[2.1,1.8,3.2,2.5,4.1,3.8,2.9], orders:[11,9,16,13,21,19,15] },
+    month: { labels:['Week 1','Week 2','Week 3','Week 4'], revenue:[18.4,22.1,31.5,16.7], orders:[87,104,145,76] },
+  },
+};
+
+// ============================================================
+// COPY (i18n)
+// ============================================================
+const COPY = {
+  en: {
+    'nav.dashboard':'Dashboard','nav.products':'Products','nav.stockin':'Stock In',
+    'nav.stockout':'Stock Out','nav.salesorders':'Sales Orders',
+    'gate.title':'Want to edit data?',
+    'gate.sub':'Enter your email to unlock editing in this demo session',
+    'btn.unlock':'Unlock','btn.addproduct':'Add Product','btn.stockin':'Record Stock In',
+    'btn.stockout':'Record Stock Out','btn.neworder':'New Order',
+    'm.totalskus':'Total SKUs','m.totalitems':'Total Items','m.lowstock':'Low Stock',
+    'm.movedweek':'Sold This Week','m.skusactive':'SKUs active',
+    'm.variantstracked':'variants tracked','m.needrestock':'SKU needs restock',
+    'm.unitsout':'units out',
+    'dash.skuoverview':'SKU Overview','dash.revenueorders':'Revenue & Orders',
+    'col.sku':'SKU','col.product':'Product Name','col.stock':'Stock','col.status':'Status',
+    'filter.week':'Week','filter.month':'Month','filter.all':'All',
+    'legend.revenue':'Revenue (Rp)','legend.orders':'Orders',
+    'modal.title':'Connect to your inventory',
+    'modal.sub':'Enter your email to access live data from your Google Sheet. Your sheet stays private — Rekago never stores your data.',
+    'modal.emaillabel':'Your Email','modal.connect':'Connect',
+    'modal.note':"Don't have access yet? Contact the sheet owner to be added as an authorized user.",
+  },
+  id: {
+    'nav.dashboard':'Dasbor','nav.products':'Produk','nav.stockin':'Stok Masuk',
+    'nav.stockout':'Stok Keluar','nav.salesorders':'Pesanan Penjualan',
+    'gate.title':'Ingin mengedit data?',
+    'gate.sub':'Masukkan email untuk membuka pengeditan di sesi demo ini',
+    'btn.unlock':'Buka','btn.addproduct':'Tambah Produk','btn.stockin':'Catat Stok Masuk',
+    'btn.stockout':'Catat Stok Keluar','btn.neworder':'Pesanan Baru',
+    'm.totalskus':'Total SKU','m.totalitems':'Total Item','m.lowstock':'Stok Menipis',
+    'm.movedweek':'Terjual Minggu Ini','m.skusactive':'SKU Aktif',
+    'm.variantstracked':'varian terlacak','m.needrestock':'SKU perlu restock',
+    'm.unitsout':'unit keluar',
+    'dash.skuoverview':'Ringkasan SKU','dash.revenueorders':'Pendapatan & Pesanan',
+    'col.sku':'SKU','col.product':'Nama Produk','col.stock':'Stok','col.status':'Status',
+    'filter.week':'Minggu','filter.month':'Bulan','filter.all':'Semua',
+    'legend.revenue':'Pendapatan (Rp)','legend.orders':'Pesanan',
+    'modal.title':'Hubungkan ke inventaris Anda',
+    'modal.sub':'Masukkan email untuk mengakses data live dari Google Sheet Anda. Sheet Anda tetap privat.',
+    'modal.emaillabel':'Email Anda','modal.connect':'Hubungkan',
+    'modal.note':'Belum punya akses? Hubungi pemilik sheet untuk ditambahkan.',
+  },
+  ko: {
+    'nav.dashboard':'대시보드','nav.products':'제품','nav.stockin':'입고',
+    'nav.stockout':'출고','nav.salesorders':'판매 주문',
+    'gate.title':'데이터를 수정하시겠어요?',
+    'gate.sub':'이 데모 세션에서 편집을 활성화하려면 이메일을 입력하세요',
+    'btn.unlock':'잠금 해제','btn.addproduct':'제품 추가','btn.stockin':'입고 기록',
+    'btn.stockout':'출고 기록','btn.neworder':'새 주문',
+    'm.totalskus':'총 SKU','m.totalitems':'총 아이템','m.lowstock':'재고 부족',
+    'm.movedweek':'이번 주 판매','m.skusactive':'활성 SKU',
+    'm.variantstracked':'변형 추적 중','m.needrestock':'재입고 필요',
+    'm.unitsout':'유닛 출고',
+    'dash.skuoverview':'SKU 개요','dash.revenueorders':'매출 & 주문',
+    'col.sku':'SKU','col.product':'제품명','col.stock':'재고','col.status':'상태',
+    'filter.week':'주간','filter.month':'월간','filter.all':'전체',
+    'legend.revenue':'매출 (Rp)','legend.orders':'주문',
+    'modal.title':'인벤토리에 연결하기',
+    'modal.sub':'이메일을 입력하여 Google Sheet의 실시간 데이터에 접근하세요. 시트는 항상 비공개입니다.',
+    'modal.emaillabel':'이메일','modal.connect':'연결',
+    'modal.note':'아직 접근 권한이 없으신가요? 시트 소유자에게 문의하세요.',
+  },
+};
+
+function setLang(lang) {
+  state.lang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+  document.querySelectorAll('[data-key]').forEach(el => {
+    const key = el.dataset.key;
+    if (COPY[lang][key]) el.textContent = COPY[lang][key];
+  });
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ============================================================
+// MODAL — TRY LIVE
+// ============================================================
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalEmail').focus();
+  document.getElementById('modalError').textContent = '';
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+async function submitLogin() {
+  const email = document.getElementById('modalEmail').value.trim();
+  const errEl  = document.getElementById('modalError');
+  errEl.textContent = '';
+
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Enter a valid email address.';
+    return;
+  }
+
+  // Demo mode — no config.js URL yet
+  if (typeof REKAGO_CONFIG === 'undefined' || !REKAGO_CONFIG.gsUrl || REKAGO_CONFIG.gsUrl.includes('YOUR_APPS')) {
+    errEl.textContent = 'Backend not configured yet. Running in demo mode.';
+    return;
+  }
+
+  const btn = document.getElementById('btnLogin');
+  btn.textContent = 'Connecting...';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch(REKAGO_CONFIG.gsUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', email }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      state.mode  = 'live';
+      state.email = email;
+      closeModal();
+      setLiveMode();
+      await loadFromSheets();
+      showToast('Connected — live data loaded.');
+    } else {
+      errEl.textContent = data.error || 'Access denied.';
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection failed. Check your config.js URL.';
+  } finally {
+    btn.textContent = COPY[state.lang]['modal.connect'] || 'Connect';
+    btn.disabled    = false;
+  }
+}
+
+function setLiveMode() {
+  document.getElementById('modeBadge').style.display    = 'none';
+  document.getElementById('btnTryLive').style.display   = 'none';
+  document.getElementById('liveIndicator').style.display = 'flex';
+  document.getElementById('demoGate').style.display      = 'none';
+  document.getElementById('lastSynced').textContent =
+    'Last updated: ' + new Date().toLocaleTimeString() + ' · Live mode';
+}
+
+// Demo unlock (edit gate — friction only, not security)
+function unlockEdit() {
+  const email = document.getElementById('gateEmail').value.trim();
+  if (!email || !email.includes('@')) return;
+  document.getElementById('demoGate').style.display = 'none';
+  showToast('Edit mode unlocked (demo session).');
+}
+
+// ============================================================
+// DATA — LOAD FROM SHEETS
+// ============================================================
+async function post(action, extra) {
+  const res = await fetch(REKAGO_CONFIG.gsUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action, email: state.email, ...extra }),
+  });
+  return res.json();
+}
+
+async function loadFromSheets() {
+  const [skus, items, si, so, orders] = await Promise.all([
+    fetch(REKAGO_CONFIG.gsUrl + '?action=getProducts').then(r => r.json()),
+    fetch(REKAGO_CONFIG.gsUrl + '?action=getItems').then(r => r.json()),
+    post('getStockIn'),
+    post('getStockOut'),
+    post('getSalesOrders'),
+  ]);
+
+  if (skus.ok)    state.skus         = skus.data;
+  if (items.ok)   state.items        = items.data;
+  if (si.ok)      state.stockIn      = si.data;
+  if (so.ok)      state.stockOut     = so.data;
+  if (orders.ok)  state.salesOrders  = orders.data;
+
+  renderAll();
+}
+
+function getData() {
+  return state.mode === 'live' ? state : MOCK;
+}
+
+// ============================================================
+// RENDER — ALL
+// ============================================================
+function renderAll() {
+  renderDashboard();
+  renderProductsTable();
+  renderStockInTable();
+  renderStockOutTable();
+  renderOrdersTable();
+  populateSkuDropdowns();
+}
+
+// ============================================================
+// RENDER — DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const d = getData();
+  const skus = state.mode === 'live' ? state.skus : MOCK.skus;
+  const items = state.mode === 'live' ? state.items : MOCK.items;
+
+  const lowCount = skus.filter(s => s['SKU Status'] === 'Low Stock').length;
+  document.getElementById('metricSkus').textContent  = skus.length;
+  document.getElementById('metricItems').textContent = items.length;
+  document.getElementById('metricLow').textContent   = lowCount;
+  document.getElementById('lowBadge').textContent    = lowCount + ' low';
+
+  // SKU table
+  const tbody = document.getElementById('skuTableBody');
+  tbody.innerHTML = skus.map(s => {
+    const pct = Math.min(100, Math.round((s['Current Stock'] / Math.max(s['Reorder Threshold'] * 5, 1)) * 100));
+    const isLow = s['SKU Status'] === 'Low Stock';
+    const isOut = s['SKU Status'] === 'Out of Stock';
+    const pillClass = isOut ? 'out' : isLow ? 'low-stock' : 'in-stock';
+    const pillText  = isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock';
+    return `<tr>
+      <td style="padding-left:18px"><span class="sku-id">${s['SKU ID']}</span></td>
+      <td><span class="sku-name">${s['SKU Name']}</span></td>
+      <td>
+        <div class="stock-bar-wrap">
+          <div class="stock-bar-bg"><div class="stock-bar-fill ${isLow?'warn':''}" style="width:${pct}%"></div></div>
+          <span class="stock-num">${s['Current Stock']}</span>
+        </div>
+      </td>
+      <td style="padding-right:18px"><span class="status-pill ${pillClass}">${pillText}</span></td>
+    </tr>`;
+  }).join('');
+
+  initChart();
+}
+
+// ============================================================
+// CHART
+// ============================================================
+function initChart() {
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  if (state.revenueChart) state.revenueChart.destroy();
+
+  const d = MOCK.chart[state.chartPeriod];
+
+  state.revenueChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Revenue',
+          data: d.revenue,
+          backgroundColor: 'rgba(242,187,22,0.72)',
+          borderRadius: 3,
+          yAxisID: 'yLeft',
+        },
+        {
+          type: 'line',
+          label: 'Orders',
+          data: d.orders,
+          borderColor: '#403919',
+          backgroundColor: 'transparent',
+          pointBackgroundColor: '#403919',
+          pointBorderColor: '#FDFAF3',
+          pointBorderWidth: 1.5,
+          pointRadius: 4,
+          tension: 0.4,
+          yAxisID: 'yRight',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#403919',
+          bodyColor: '#BF9E3B',
+          borderColor: 'rgba(191,158,59,0.3)',
+          borderWidth: 1,
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 0
+              ? 'Revenue: Rp ' + ctx.raw + 'M'
+              : 'Orders: ' + ctx.raw,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(191,158,59,0.07)' },
+          ticks: { color: '#BF9E3B', font: { size: 11 } },
+        },
+        yLeft: {
+          position: 'left',
+          grid: { color: 'rgba(191,158,59,0.07)' },
+          ticks: { color: '#BF9E3B', font: { size: 11 }, callback: v => v },
+        },
+        yRight: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#403919', font: { size: 11 } },
+        },
+      },
+    },
+  });
+}
+
+function setPeriod(p) {
+  state.chartPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  initChart();
+}
+
+// ============================================================
+// RENDER — PRODUCTS TABLE
+// ============================================================
+function renderProductsTable() {
+  const skus = state.mode === 'live' ? state.skus : MOCK.skus;
+  const q    = document.getElementById('productSearch').value.toLowerCase();
+  const cat  = state.activeCatFilter;
+
+  const filtered = skus.filter(s =>
+    (!cat || s['Category'] === cat) &&
+    (!q || s['SKU Name'].toLowerCase().includes(q) || s['SKU ID'].toLowerCase().includes(q))
+  );
+
+  document.getElementById('productsBody').innerHTML = filtered.map(s => {
+    const channels = (s['Channels'] || '').split(',').map(c => {
+      const ch = c.trim();
+      const cls = ch === 'Tokopedia' ? 'ch-tokopedia' : ch === 'Shopee' ? 'ch-shopee' : ch === 'TikTok Shop' ? 'ch-tiktok' : 'ch-direct';
+      return `<span class="channel-pill ${cls}">${ch}</span>`;
+    }).join('');
+    const isLow = s['SKU Status'] === 'Low Stock';
+    const isOut = s['SKU Status'] === 'Out of Stock';
+    const pillClass = isOut ? 'out' : isLow ? 'low-stock' : 'in-stock';
+    return `<tr>
+      <td><span class="mono">${s['SKU ID']}</span></td>
+      <td>${s['SKU Name']}</td>
+      <td>${s['Category']}</td>
+      <td>${channels}</td>
+      <td>Rp ${Number(s['Unit Price (IDR)']).toLocaleString('id-ID')}</td>
+      <td>${s['Current Stock']}</td>
+      <td><span class="status-pill ${pillClass}">${s['SKU Status']}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px">No products found</td></tr>';
+}
+
+function filterCat(btn, cat) {
+  state.activeCatFilter = cat;
+  document.querySelectorAll('#page-products .cat-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProductsTable();
+}
+
+// ============================================================
+// RENDER — STOCK IN TABLE
+// ============================================================
+function renderStockInTable() {
+  const rows = state.mode === 'live' ? state.stockIn : MOCK.stockIn;
+  document.getElementById('stockInBody').innerHTML = rows.map(r => `<tr>
+    <td>${r.Date}</td>
+    <td class="mono">${r['Reference ID']}</td>
+    <td class="mono">${r['SKU ID']}</td>
+    <td>${r['Item ID']}</td>
+    <td>${r['Supplier Name']}</td>
+    <td>${r['Qty In']}</td>
+    <td>Rp ${Number(r['Unit Cost (IDR)']).toLocaleString('id-ID')}</td>
+    <td>Rp ${Number(r['Total Cost (IDR)']).toLocaleString('id-ID')}</td>
+    <td>${r['Type']}</td>
+  </tr>`).join('') || '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px">No records</td></tr>';
+}
+
+// ============================================================
+// RENDER — STOCK OUT TABLE
+// ============================================================
+function renderStockOutTable() {
+  const rows = state.mode === 'live' ? state.stockOut : MOCK.stockOut;
+  document.getElementById('stockOutBody').innerHTML = rows.map(r => {
+    const ch = r['Channel'];
+    const cls = ch === 'Tokopedia' ? 'ch-tokopedia' : ch === 'Shopee' ? 'ch-shopee' : ch === 'TikTok Shop' ? 'ch-tiktok' : 'ch-direct';
+    return `<tr>
+      <td>${r.Date}</td>
+      <td class="mono">${r['Reference ID']}</td>
+      <td class="mono">${r['SKU ID']}</td>
+      <td>${r['Item ID']}</td>
+      <td><span class="channel-pill ${cls}">${ch}</span></td>
+      <td>${r['Qty Out']}</td>
+      <td>Rp ${Number(r['Total Revenue (IDR)']).toLocaleString('id-ID')}</td>
+      <td>${r['Type']}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px">No records</td></tr>';
+}
+
+// ============================================================
+// RENDER — ORDERS TABLE
+// ============================================================
+function renderOrdersTable() {
+  const orders = state.mode === 'live' ? state.salesOrders : MOCK.salesOrders;
+  const q      = document.getElementById('orderSearch').value.toLowerCase();
+  const ch     = state.activeChannelFilter;
+
+  const filtered = orders.filter(o =>
+    (!ch || o['Channel'] === ch) &&
+    (!q || o['SO Number'].toLowerCase().includes(q) || (o['Customer Ref']||'').toLowerCase().includes(q))
+  );
+
+  document.getElementById('ordersBody').innerHTML = filtered.map(o => {
+    const chCls = o['Channel'] === 'Tokopedia' ? 'ch-tokopedia' : o['Channel'] === 'Shopee' ? 'ch-shopee' : o['Channel'] === 'TikTok Shop' ? 'ch-tiktok' : 'ch-direct';
+    const stCls = o['Status'] === 'Fulfilled' ? 'in-stock' : o['Status'] === 'Cancelled' ? 'out' : 'low-stock';
+    return `<tr>
+      <td class="mono">${o['SO Number']}</td>
+      <td>${o['Date']}</td>
+      <td><span class="channel-pill ${chCls}">${o['Channel']}</span></td>
+      <td>${o['Customer Ref'] || ''}</td>
+      <td>${o['Total Qty']}</td>
+      <td>Rp ${Number(o['Total Revenue (IDR)']).toLocaleString('id-ID')}</td>
+      <td><span class="status-pill ${stCls}">${o['Status']}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px">No orders found</td></tr>';
+}
+
+function filterChannel(btn, ch) {
+  state.activeChannelFilter = ch;
+  document.querySelectorAll('#page-salesorders .cat-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrdersTable();
+}
+
+// ============================================================
+// FORM DROPDOWNS
+// ============================================================
+function populateSkuDropdowns() {
+  const skus = state.mode === 'live' ? state.skus : MOCK.skus;
+  ['siSkuId','soSkuId'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = skus.map(s => `<option value="${s['SKU ID']}">${s['SKU ID']} — ${s['SKU Name']}</option>`).join('');
+  });
+  populateItems('siSkuId','siItemId');
+  populateItems('soSkuId','soItemId');
+}
+
+function populateItems(skuSelId, itemSelId) {
+  const skuId = document.getElementById(skuSelId).value;
+  const items = state.mode === 'live' ? state.items : MOCK.items;
+  const filtered = items.filter(i => i['SKU ID'] === skuId);
+  document.getElementById(itemSelId).innerHTML =
+    filtered.map(i => `<option value="${i['Item ID']}">${i['Item ID']} — ${i['Item Name']}</option>`).join('');
+}
+
+// ============================================================
+// FORM SUBMISSIONS
+// ============================================================
+async function submitAddProduct() {
+  if (state.mode !== 'live') { showToast('Connect to live mode to add products.', true); return; }
+  const channels = [...document.querySelectorAll('#addProductForm input[type=checkbox]:checked')].map(c => c.value);
+  const payload  = {
+    skuId: document.getElementById('fpSkuId').value.trim(),
+    skuName: document.getElementById('fpSkuName').value.trim(),
+    category: document.getElementById('fpCategory').value,
+    channels,
+    unitPrice: document.getElementById('fpUnitPrice').value,
+    costPrice: document.getElementById('fpCostPrice').value,
+    reorderThreshold: document.getElementById('fpReorder').value,
+    notes: document.getElementById('fpNotes').value,
+  };
+  if (!payload.skuId || !payload.skuName) { showToast('SKU ID and name are required.', true); return; }
+  const res = await post('addProduct', payload);
+  if (res.ok) { showToast('Product added.'); await loadFromSheets(); }
+  else showToast(res.error || 'Error adding product.', true);
+}
+
+async function submitStockIn() {
+  if (state.mode !== 'live') { showToast('Connect to live mode to record stock.', true); return; }
+  const payload = {
+    date: document.getElementById('siDate').value,
+    refId: document.getElementById('siRefId').value,
+    skuId: document.getElementById('siSkuId').value,
+    itemId: document.getElementById('siItemId').value,
+    supplier: document.getElementById('siSupplier').value,
+    qty: document.getElementById('siQty').value,
+    unitCost: document.getElementById('siUnitCost').value,
+    type: document.getElementById('siType').value,
+    notes: document.getElementById('siNotes').value,
+  };
+  const res = await post('addStockIn', payload);
+  if (res.ok) { showToast('Stock In recorded.'); await loadFromSheets(); }
+  else showToast(res.error || 'Error.', true);
+}
+
+async function submitStockOut() {
+  if (state.mode !== 'live') { showToast('Connect to live mode to record stock.', true); return; }
+  const payload = {
+    date: document.getElementById('soDate').value,
+    refId: document.getElementById('soRefId').value,
+    skuId: document.getElementById('soSkuId').value,
+    itemId: document.getElementById('soItemId').value,
+    channel: document.getElementById('soChannel').value,
+    orderRef: document.getElementById('soOrderRef').value,
+    qty: document.getElementById('soQty').value,
+    unitPrice: document.getElementById('soUnitPrice').value,
+    type: document.getElementById('soType').value,
+    notes: document.getElementById('soNotes').value,
+  };
+  const res = await post('addStockOut', payload);
+  if (res.ok) { showToast('Stock Out recorded.'); await loadFromSheets(); }
+  else showToast(res.error || 'Error.', true);
+}
+
+async function submitNewOrder() {
+  if (state.mode !== 'live') { showToast('Connect to live mode to create orders.', true); return; }
+  const payload = {
+    soNumber: document.getElementById('nsoNum').value,
+    date: document.getElementById('nsoDate').value,
+    channel: document.getElementById('nsoChannel').value,
+    customerRef: document.getElementById('nsoCustRef').value,
+    totalQty: document.getElementById('nsoQty').value,
+    totalRevenue: document.getElementById('nsoRevenue').value,
+    status: document.getElementById('nsoStatus').value,
+    notes: document.getElementById('nsoNotes').value,
+  };
+  const res = await post('createSO', payload);
+  if (res.ok) { showToast('Sales Order created.'); await loadFromSheets(); }
+  else showToast(res.error || 'Error.', true);
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  // Set today's date in date inputs
+  const today = new Date().toISOString().slice(0, 10);
+  ['siDate','soDate','nsoDate'].forEach(id => {
+    document.getElementById(id).value = today;
+  });
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
