@@ -1,0 +1,155 @@
+<!-- stockin.html — loaded into #page-frame by index.html -->
+<main>
+  <div class="page-title">Stock In</div>
+
+  <div class="form-section">
+    <div class="form-section-title">Record Stock In</div>
+    <div class="form-grid form-grid-4">
+      <div class="form-field">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="siDate" type="date">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Reference ID</label>
+        <input class="form-input" id="siRefId" placeholder="PL-2026-005">
+      </div>
+      <div class="form-field">
+        <label class="form-label">SKU</label>
+        <select class="form-select" id="siSkuId" onchange="populateSiItems()"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Item</label>
+        <select class="form-select" id="siItemId"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Supplier</label>
+        <input class="form-input" id="siSupplier" placeholder="Supplier name">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Qty In</label>
+        <input class="form-input" id="siQty" type="number" placeholder="0" min="1">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Unit Cost (IDR)</label>
+        <input class="form-input" id="siUnitCost" type="number" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="siType">
+          <option>Restock</option>
+          <option>Initial Stock</option>
+          <option>Return Inbound</option>
+        </select>
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="siNotes" placeholder="Optional">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitStockIn()">Record Stock In</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Ref ID</th>
+          <th>SKU</th>
+          <th>Item</th>
+          <th>Supplier</th>
+          <th>Qty</th>
+          <th>Unit Cost</th>
+          <th>Total Cost</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody id="stockInBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const SI_MOCK = [
+  { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Supplier Name':'Supplier Rattan Jakarta','Qty In':40,'Unit Cost (IDR)':22000,'Total Cost (IDR)':880000,'Type':'Restock' },
+  { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Supplier Name':'Supplier Rattan Jakarta','Qty In':20,'Unit Cost (IDR)':22000,'Total Cost (IDR)':440000,'Type':'Restock' },
+  { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Supplier Name':'Supplier Tekstil Bandung','Qty In':30,'Unit Cost (IDR)':9000,'Total Cost (IDR)':270000,'Type':'Initial Stock' },
+];
+
+const ITEMS_MOCK_SI = [
+  { 'SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Item Name':'Rattan Placemat — Natural' },
+  { 'SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Item Name':'Rattan Placemat — Dark' },
+  { 'SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Item Name':'Linen Napkin — Cream' },
+  { 'SKU ID':'BLM-002','Item ID':'BLM-002-SND','Item Name':'Linen Napkin — Sand' },
+  { 'SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Item Name':'Rattan + Napkin Gift Set' },
+];
+
+function init_stockin() {
+  document.getElementById('siDate').value = new Date().toISOString().slice(0, 10);
+  populateSiSkus();
+  renderStockInTable();
+}
+
+function populateSiSkus() {
+  const skus = REKAGO.mode === 'live' ? REKAGO.skus : [
+    { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat' },
+    { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin' },
+    { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set' },
+  ];
+  document.getElementById('siSkuId').innerHTML =
+    skus.map(s => `<option value="${s['SKU ID']}">${s['SKU ID']} — ${s['SKU Name']}</option>`).join('');
+  populateSiItems();
+}
+
+function populateSiItems() {
+  const skuId = document.getElementById('siSkuId').value;
+  const items = REKAGO.mode === 'live' ? REKAGO.items : ITEMS_MOCK_SI;
+  document.getElementById('siItemId').innerHTML =
+    items.filter(i => i['SKU ID'] === skuId)
+         .map(i => `<option value="${i['Item ID']}">${i['Item ID']} — ${i['Item Name']}</option>`)
+         .join('');
+}
+
+function renderStockInTable() {
+  const rows = REKAGO.mode === 'live' ? REKAGO.stockIn : SI_MOCK;
+  document.getElementById('stockInBody').innerHTML = rows.length
+    ? rows.map(r => `<tr>
+        <td>${r.Date}</td>
+        <td><span class="mono">${r['Reference ID']}</span></td>
+        <td><span class="mono">${r['SKU ID']}</span></td>
+        <td>${r['Item ID']}</td>
+        <td>${r['Supplier Name']}</td>
+        <td>${r['Qty In']}</td>
+        <td>${formatRp(r['Unit Cost (IDR)'])}</td>
+        <td>${formatRp(r['Total Cost (IDR)'])}</td>
+        <td>${r['Type']}</td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="9">No records yet</td></tr>';
+}
+
+async function submitStockIn() {
+  if (!requireLive()) return;
+  const payload = {
+    date:       document.getElementById('siDate').value,
+    refId:      document.getElementById('siRefId').value,
+    skuId:      document.getElementById('siSkuId').value,
+    itemId:     document.getElementById('siItemId').value,
+    supplier:   document.getElementById('siSupplier').value,
+    qty:        document.getElementById('siQty').value,
+    unitCost:   document.getElementById('siUnitCost').value,
+    type:       document.getElementById('siType').value,
+    notes:      document.getElementById('siNotes').value,
+  };
+  if (!payload.qty || Number(payload.qty) < 1) { showToast('Qty must be at least 1.', true); return; }
+  const res = await apiPost('addStockIn', payload);
+  if (res.ok) {
+    showToast('Stock In recorded.');
+    await loadAllData();
+    renderStockInTable();
+  } else {
+    showToast(res.error || 'Error.', true);
+  }
+}
+</script>

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rekago — Inventory, rekapped</title>
+<script src="config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  --bg:      #FDFAF3;
+  --nav:     #403919;
+  --gold:    #F2BB16;
+  --amber:   #BF9E3B;
+  --warn:    #A6600A;
+  --ok:      #5C8A1A;
+  --danger:  #C0392B;
+  --surface: #FFFFFF;
+  --border:  rgba(191,158,59,0.2);
+  --text:    #403919;
+  --muted:   rgba(64,57,25,0.5);
+
+  --ch-tokopedia: #E05E1E;
+  --ch-shopee:    #D0001B;
+  --ch-tiktok:    #1DAB52;
+  --ch-direct:    #1A6A9A;
+
+  --radius: 8px;
+  --shadow: 0 1px 4px rgba(64,57,25,0.08);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: 13px; }
+
+/* ============================================================
+   NAV
+   ============================================================ */
+nav {
+  background: var(--nav);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  height: 48px;
+  gap: 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-brand { display: flex; flex-direction: column; line-height: 1.1; min-width: 110px; }
+.nav-brand-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px;
+  color: var(--gold);
+  letter-spacing: -0.3px;
+}
+.nav-brand-sub {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(242,187,22,0.45);
+}
+.nav-tabs { display: flex; gap: 2px; flex: 1; justify-content: center; }
+.nav-tab {
+  background: none;
+  border: none;
+  color: rgba(242,187,22,0.55);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-tab:hover { color: var(--gold); background: rgba(242,187,22,0.07); }
+.nav-tab.active { color: var(--nav); background: var(--gold); font-weight: 600; }
+
+.nav-right { display: flex; align-items: center; gap: 10px; min-width: 220px; justify-content: flex-end; }
+.lang-btn {
+  background: none;
+  border: none;
+  color: rgba(242,187,22,0.5);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.lang-btn:hover, .lang-btn.active { color: var(--gold); }
+.demo-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--warn);
+  background: rgba(166,96,10,0.12);
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.btn-trylive {
+  background: var(--gold);
+  color: var(--nav);
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: opacity 0.15s;
+}
+.btn-trylive:hover { opacity: 0.88; }
+.live-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-weight: 600; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ============================================================
+   PAGE FRAME
+   ============================================================ */
+#page-frame { flex: 1; }
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ============================================================
+   MODAL — TRY LIVE
+   ============================================================ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(64,57,25,0.45);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 32px;
+  width: 400px;
+  box-shadow: 0 8px 40px rgba(64,57,25,0.18);
+}
+.modal-brand { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--gold); margin-bottom: 6px; }
+.modal-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+.modal-label { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--amber); margin-bottom: 6px; display: block; }
+.modal-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border 0.15s;
+}
+.modal-input:focus { border-color: var(--amber); }
+.modal-error { font-size: 12px; color: var(--danger); margin-top: 8px; min-height: 16px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-modal-primary {
+  flex: 1;
+  background: var(--gold);
+  color: var(--nav);
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px;
+  border-radius: 8px;
+  transition: opacity 0.15s;
+}
+.btn-modal-primary:hover { opacity: 0.88; }
+.btn-modal-secondary {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 11px 18px;
+  border-radius: 8px;
+}
+.modal-note { font-size: 11px; color: var(--muted); margin-top: 16px; line-height: 1.5; text-align: center; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--nav);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(64,57,25,0.2);
+  z-index: 300;
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.25s ease;
+  pointer-events: none;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { background: var(--danger); color: #fff; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<nav>
+  <div class="nav-brand">
+    <span class="nav-brand-name">Rekago</span>
+    <span class="nav-brand-sub">재고 · Inventory</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="loadPage('dashboard')">Dashboard</button>
+    <button class="nav-tab" onclick="loadPage('products')">Products</button>
+    <button class="nav-tab" onclick="loadPage('stockin')">Stock In</button>
+    <button class="nav-tab" onclick="loadPage('stockout')">Stock Out</button>
+    <button class="nav-tab" onclick="loadPage('salesorders')">Sales Orders</button>
+  </div>
+  <div class="nav-right">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('id')">ID</button>
+    <button class="lang-btn" onclick="setLang('ko')">한국어</button>
+    <span class="demo-badge" id="modeBadge">DEMO</span>
+    <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Live</button>
+    <div class="live-indicator" id="liveIndicator" style="display:none">
+      <span class="live-dot"></span><span>Live</span>
+    </div>
+  </div>
+</nav>
+
+<div id="page-frame"></div>
+
+</div>
+
+<!-- TRY LIVE MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-brand">Rekago</div>
+    <div class="modal-title">Connect to your inventory</div>
+    <div class="modal-sub">Enter your email to access live data from your Google Sheet. Your sheet stays private — Rekago never stores your data.</div>
+    <div>
+      <label class="modal-label">Your Email</label>
+      <input class="modal-input" id="modalEmail" type="email" placeholder="you@email.com"
+             onkeydown="if(event.key==='Enter') submitLogin()">
+      <div class="modal-error" id="modalError"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal-primary" id="btnLogin" onclick="submitLogin()">Connect</button>
+    </div>
+    <div class="modal-note">Don't have access yet? Contact the sheet owner to be added as an authorized user.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// GLOBAL STATE — shared across all page modules
+// ============================================================
+const REKAGO = {
+  mode:   'demo',   // 'demo' | 'live'
+  email:  null,
+  lang:   'en',
+  // Data cache — populated on live login
+  skus:         [],
+  items:        [],
+  stockIn:      [],
+  stockOut:     [],
+  salesOrders:  [],
+};
+
+// ============================================================
+// PAGE LOADER
+// ============================================================
+const PAGE_CACHE = {};
+
+async function loadPage(name) {
+  // Update nav active state
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  // Load HTML if not cached
+  if (!PAGE_CACHE[name]) {
+    const res  = await fetch(name + '.html');
+    PAGE_CACHE[name] = await res.text();
+  }
+
+  document.getElementById('page-frame').innerHTML = PAGE_CACHE[name];
+
+  // Run page init if defined
+  if (typeof window['init_' + name] === 'function') {
+    window['init_' + name]();
+  }
+}
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+const COPY = {
+  en: { 'modal.connect': 'Connect' },
+  id: { 'modal.connect': 'Hubungkan' },
+  ko: { 'modal.connect': '연결' },
+};
+
+function setLang(lang) {
+  REKAGO.lang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+  // Broadcast to current page if it has a lang handler
+  if (typeof window.onLangChange === 'function') window.onLangChange(lang);
+}
+
+// ============================================================
+// MODAL — TRY LIVE
+// ============================================================
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalEmail').focus();
+  document.getElementById('modalError').textContent = '';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+async function submitLogin() {
+  const email  = document.getElementById('modalEmail').value.trim();
+  const errEl  = document.getElementById('modalError');
+  errEl.textContent = '';
+
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Enter a valid email address.';
+    return;
+  }
+
+  if (!REKAGO_CONFIG?.gsUrl || REKAGO_CONFIG.gsUrl.includes('YOUR_APPS')) {
+    errEl.textContent = 'Backend not configured. Add your Apps Script URL to config.js.';
+    return;
+  }
+
+  const btn = document.getElementById('btnLogin');
+  btn.textContent = 'Connecting...';
+  btn.disabled    = true;
+
+  try {
+    const res  = await fetch(REKAGO_CONFIG.gsUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', email }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      REKAGO.mode  = 'live';
+      REKAGO.email = email;
+      closeModal();
+      setLiveMode();
+      await loadAllData();
+      // Reload current page to reflect live data
+      const activeTab = document.querySelector('.nav-tab.active');
+      if (activeTab) {
+        const pageName = activeTab.textContent.toLowerCase().replace(/\s/g, '');
+        PAGE_CACHE[pageName] = null; // clear cache so it re-inits
+        activeTab.click();
+      }
+      showToast('Connected — live data loaded.');
+    } else {
+      errEl.textContent = data.error || 'Access denied.';
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection failed. Check your config.js URL.';
+  } finally {
+    btn.textContent = 'Connect';
+    btn.disabled    = false;
+  }
+}
+
+function setLiveMode() {
+  document.getElementById('modeBadge').style.display     = 'none';
+  document.getElementById('btnTryLive').style.display    = 'none';
+  document.getElementById('liveIndicator').style.display = 'flex';
+}
+
+// ============================================================
+// DATA — BACKEND CALLS
+// ============================================================
+async function apiGet(action) {
+  const res = await fetch(REKAGO_CONFIG.gsUrl + '?action=' + action);
+  return res.json();
+}
+
+async function apiPost(action, payload) {
+  const res = await fetch(REKAGO_CONFIG.gsUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action, email: REKAGO.email, ...payload }),
+  });
+  return res.json();
+}
+
+async function loadAllData() {
+  const [skus, items, si, so, orders] = await Promise.all([
+    apiGet('getProducts'),
+    apiGet('getItems'),
+    apiPost('getStockIn'),
+    apiPost('getStockOut'),
+    apiPost('getSalesOrders'),
+  ]);
+  if (skus.ok)   REKAGO.skus        = skus.data;
+  if (items.ok)  REKAGO.items       = items.data;
+  if (si.ok)     REKAGO.stockIn     = si.data;
+  if (so.ok)     REKAGO.stockOut    = so.data;
+  if (orders.ok) REKAGO.salesOrders = orders.data;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ============================================================
+// SHARED HELPERS (available to all page scripts)
+// ============================================================
+function requireLive() {
+  if (REKAGO.mode !== 'live') {
+    showToast('Connect to live mode first.', true);
+    return false;
+  }
+  return true;
+}
+
+function formatRp(val) {
+  return 'Rp ' + Number(val).toLocaleString('id-ID');
+}
+
+function channelPill(ch) {
+  const cls = ch === 'Tokopedia' ? 'ch-tokopedia'
+            : ch === 'Shopee'    ? 'ch-shopee'
+            : ch === 'TikTok Shop' ? 'ch-tiktok'
+            : 'ch-direct';
+  return `<span class="channel-pill ${cls}">${ch}</span>`;
+}
+
+function statusPill(s) {
+  const cls = s === 'In Stock' || s === 'Fulfilled' ? 'in-stock'
+            : s === 'Low Stock' || s === 'Pending'  ? 'low-stock'
+            : 'out';
+  return `<span class="status-pill ${cls}">${s}</span>`;
+}
+
+// ============================================================
+// SHARED CSS injected once for all pages
+// ============================================================
+const SHARED_CSS = `
+<style>
+  main { padding: 24px; max-width: 1280px; margin: 0 auto; }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 24px; letter-spacing: -0.3px; margin-bottom: 20px; }
+  .page-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 16px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
+  .card-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--amber); }
+  .card-body { padding: 16px 18px; }
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--amber); padding: 10px 14px; text-align: left; background: rgba(191,158,59,0.05); border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid rgba(191,158,59,0.08); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(242,187,22,0.03); }
+  .form-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .form-section-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .form-grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .form-field { display: flex; flex-direction: column; gap: 5px; }
+  .form-field.full { grid-column: 1 / -1; }
+  .form-label { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--amber); }
+  .form-input, .form-select { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; background: var(--bg); color: var(--text); outline: none; transition: border 0.15s; width: 100%; }
+  .form-input:focus, .form-select:focus { border-color: var(--amber); background: var(--surface); }
+  .checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 2px; }
+  .checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+  .checkbox-item input { cursor: pointer; accent-color: var(--gold); }
+  .form-actions { margin-top: 16px; display: flex; gap: 10px; }
+  .btn-primary { background: var(--gold); color: var(--nav); border: none; font-size: 13px; font-weight: 700; padding: 9px 20px; border-radius: 6px; transition: opacity 0.15s; cursor: pointer; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-secondary { background: none; color: var(--muted); border: 1px solid var(--border); font-size: 13px; font-weight: 500; padding: 9px 18px; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+  .btn-secondary:hover { border-color: var(--amber); color: var(--text); }
+  .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-input { border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; background: var(--surface); color: var(--text); outline: none; width: 220px; transition: border 0.15s; }
+  .search-input:focus { border-color: var(--amber); }
+  .cat-pill { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 20px; cursor: pointer; transition: all 0.15s; }
+  .cat-pill:hover, .cat-pill.active { border-color: var(--gold); color: var(--text); background: rgba(242,187,22,0.08); }
+  .status-pill { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  .status-pill.in-stock  { background: rgba(92,138,26,0.1);  color: var(--ok); }
+  .status-pill.low-stock { background: rgba(166,96,10,0.1);  color: var(--warn); }
+  .status-pill.out       { background: rgba(192,57,43,0.1);  color: var(--danger); }
+  .channel-pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; margin: 1px 2px 1px 0; color: #fff; }
+  .ch-tokopedia { background: var(--ch-tokopedia); }
+  .ch-shopee    { background: var(--ch-shopee); }
+  .ch-tiktok    { background: var(--ch-tiktok); }
+  .ch-direct    { background: var(--ch-direct); }
+  .mono { font-family: 'Courier New', monospace; font-size: 11px; color: var(--amber); }
+  .text-muted { color: var(--muted); }
+  .empty-row td { text-align: center; padding: 32px; color: var(--muted); }
+  .demo-gate { background: rgba(242,187,22,0.07); border: 1px solid rgba(242,187,22,0.25); border-radius: var(--radius); padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 16px; }
+  .demo-gate-text strong { font-weight: 600; }
+  .demo-gate-text p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .demo-gate-right { display: flex; align-items: center; gap: 8px; }
+  .demo-gate-input { border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; background: var(--surface); color: var(--text); width: 200px; outline: none; }
+  .btn-unlock { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 6px; cursor: pointer; }
+</style>
+`;
+
+// ============================================================
+// BOOT — load dashboard on first visit
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  // Inject shared CSS into head
+  document.head.insertAdjacentHTML('beforeend', SHARED_CSS);
+  // Load dashboard as default page
+  loadPage('dashboard');
+});
+</script>
+</body>
+</html>

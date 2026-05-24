@@ -1,0 +1,280 @@
+<!-- dashboard.html — loaded into #page-frame by index.html -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<main>
+  <div class="page-title">Dashboard</div>
+  <div class="page-meta" id="dashMeta">Last updated: demo mode</div>
+
+  <!-- Demo gate (hidden in live mode) -->
+  <div class="demo-gate" id="demoGate" style="display:none">
+    <div class="demo-gate-text">
+      <strong>Want to edit data?</strong>
+      <p>Enter your email to unlock editing in this demo session</p>
+    </div>
+    <div class="demo-gate-right">
+      <input class="demo-gate-input" id="gateEmail" type="email" placeholder="your@email.com">
+      <button class="btn-unlock" onclick="unlockEdit()">Unlock</button>
+    </div>
+  </div>
+
+  <!-- Metric cards -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow)">
+      <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:6px">Total SKUs</div>
+      <div style="font-size:28px;font-weight:600;line-height:1;margin-bottom:4px" id="mSkus">3</div>
+      <div style="font-size:11px;color:var(--muted)">SKUs active</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow)">
+      <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:6px">Total Items</div>
+      <div style="font-size:28px;font-weight:600;line-height:1;margin-bottom:4px" id="mItems">5</div>
+      <div style="font-size:11px;color:var(--muted)">variants tracked</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);border-left:3px solid var(--warn)">
+      <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:6px">Low Stock</div>
+      <div style="font-size:28px;font-weight:600;line-height:1;margin-bottom:4px" id="mLow">1</div>
+      <div style="font-size:11px;color:var(--muted)">SKU needs restock</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);border-left:3px solid var(--ok)">
+      <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:6px">Sold This Week</div>
+      <div style="font-size:28px;font-weight:600;line-height:1;margin-bottom:4px" id="mSold">22</div>
+      <div style="font-size:11px;color:var(--muted)">units out</div>
+    </div>
+  </div>
+
+  <!-- SKU Overview + Chart -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    <!-- SKU Overview -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">SKU Overview</span>
+        <span id="lowBadge" style="font-size:10px;font-weight:700;background:rgba(166,96,10,0.1);color:var(--warn);padding:2px 8px;border-radius:4px">1 low</span>
+      </div>
+      <div style="padding:0">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th style="padding-left:18px">SKU</th>
+              <th>Product Name</th>
+              <th>Stock</th>
+              <th style="padding-right:18px">Status</th>
+            </tr>
+          </thead>
+          <tbody id="skuTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revenue & Orders Chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Revenue & Orders</span>
+        <div style="display:flex;gap:4px">
+          <button class="period-btn active" id="btnWeek" onclick="setPeriod('week')">Week</button>
+          <button class="period-btn" id="btnMonth" onclick="setPeriod('month')">Month</button>
+        </div>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;gap:16px;padding:10px 18px 0">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <span style="width:12px;height:10px;border-radius:2px;background:rgba(242,187,22,0.72);display:inline-block"></span>
+          Revenue (Rp)
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <span style="width:18px;height:2px;background:#403919;display:inline-block;position:relative">
+            <span style="position:absolute;right:-1px;top:-3px;width:8px;height:8px;border-radius:50%;background:#403919;border:1.5px solid #FDFAF3;display:inline-block"></span>
+          </span>
+          Orders
+        </div>
+      </div>
+      <div style="padding:8px 16px 16px">
+        <canvas id="revenueChart" height="200" role="img" aria-label="Revenue and Orders chart"></canvas>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<style>
+.period-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.period-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--nav);
+}
+.stock-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.stock-bar-bg { width: 80px; height: 4px; background: rgba(191,158,59,0.15); border-radius: 2px; overflow: hidden; }
+.stock-bar-fill { height: 100%; border-radius: 2px; background: var(--gold); }
+.stock-bar-fill.low { background: var(--warn); }
+</style>
+
+<script>
+// ── Mock data ─────────────────────────────────────────────
+const DASH_MOCK = {
+  skus: [
+    { id:'BLM-001', name:'Rattan Placemat',       stock:84, reorder:20, status:'In Stock'  },
+    { id:'BLM-002', name:'Linen Napkin',           stock:56, reorder:15, status:'In Stock'  },
+    { id:'BLM-003', name:'Rattan + Napkin Set',    stock:8,  reorder:10, status:'Low Stock' },
+  ],
+  chart: {
+    week:  { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], revenue:[2.1,1.8,3.2,2.5,4.1,3.8,2.9], orders:[11,9,16,13,21,19,15] },
+    month: { labels:['Week 1','Week 2','Week 3','Week 4'],       revenue:[18.4,22.1,31.5,16.7],           orders:[87,104,145,76] },
+  },
+};
+
+let dashChart    = null;
+let chartPeriod  = 'week';
+
+// ── Init ──────────────────────────────────────────────────
+function init_dashboard() {
+  const skus  = REKAGO.mode === 'live' ? REKAGO.skus.map(s => ({
+    id:      s['SKU ID'],
+    name:    s['SKU Name'],
+    stock:   Number(s['Current Stock']),
+    reorder: Number(s['Reorder Threshold']),
+    status:  s['SKU Status'],
+  })) : DASH_MOCK.skus;
+
+  // Metrics
+  const items   = REKAGO.mode === 'live' ? REKAGO.items : [{},{},{},{},{}];
+  const lowCount = skus.filter(s => s.status === 'Low Stock').length;
+  const soldQty  = REKAGO.mode === 'live'
+    ? REKAGO.stockOut.filter(r => r['Type'] === 'Sold').reduce((sum, r) => sum + Number(r['Qty Out']), 0)
+    : 22;
+
+  document.getElementById('mSkus').textContent  = skus.length;
+  document.getElementById('mItems').textContent = items.length;
+  document.getElementById('mLow').textContent   = lowCount;
+  document.getElementById('mSold').textContent  = soldQty;
+  document.getElementById('lowBadge').textContent = lowCount + ' low';
+
+  // Demo gate
+  if (REKAGO.mode === 'demo') {
+    document.getElementById('demoGate').style.display = 'flex';
+  }
+
+  // Meta
+  document.getElementById('dashMeta').textContent =
+    REKAGO.mode === 'live'
+      ? 'Last updated: ' + new Date().toLocaleTimeString() + ' · Live mode'
+      : 'Last updated: today · Demo mode';
+
+  // SKU table
+  document.getElementById('skuTableBody').innerHTML = skus.map(s => {
+    const pct    = Math.min(100, Math.round((s.stock / Math.max(s.reorder * 5, 1)) * 100));
+    const isLow  = s.status === 'Low Stock';
+    const isOut  = s.status === 'Out of Stock';
+    const pClass = isOut ? 'out' : isLow ? 'low-stock' : 'in-stock';
+    const pText  = isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock';
+    return `<tr>
+      <td style="padding-left:18px"><span class="mono">${s.id}</span></td>
+      <td style="font-weight:500">${s.name}</td>
+      <td>
+        <div class="stock-bar-wrap">
+          <div class="stock-bar-bg"><div class="stock-bar-fill ${isLow ? 'low' : ''}" style="width:${pct}%"></div></div>
+          <span style="font-size:12px;font-weight:500;min-width:24px">${s.stock}</span>
+        </div>
+      </td>
+      <td style="padding-right:18px">${statusPill(pText)}</td>
+    </tr>`;
+  }).join('');
+
+  // Chart
+  initChart();
+}
+
+function initChart() {
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  if (dashChart) dashChart.destroy();
+
+  // In live mode: aggregate from REKAGO.stockOut — for now falls back to mock
+  const d = DASH_MOCK.chart[chartPeriod];
+
+  dashChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {
+          type: 'bar',
+          data: d.revenue,
+          backgroundColor: 'rgba(242,187,22,0.72)',
+          borderRadius: 3,
+          yAxisID: 'yLeft',
+        },
+        {
+          type: 'line',
+          data: d.orders,
+          borderColor: '#403919',
+          backgroundColor: 'transparent',
+          pointBackgroundColor: '#403919',
+          pointBorderColor: '#FDFAF3',
+          pointBorderWidth: 1.5,
+          pointRadius: 4,
+          tension: 0.4,
+          yAxisID: 'yRight',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#403919',
+          bodyColor: '#BF9E3B',
+          borderColor: 'rgba(191,158,59,0.3)',
+          borderWidth: 1,
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 0
+              ? 'Revenue: Rp ' + ctx.raw + 'M'
+              : 'Orders: ' + ctx.raw,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(191,158,59,0.07)' },
+          ticks: { color: '#BF9E3B', font: { size: 11 } },
+        },
+        yLeft: {
+          position: 'left',
+          grid: { color: 'rgba(191,158,59,0.07)' },
+          ticks: { color: '#BF9E3B', font: { size: 11 } },
+        },
+        yRight: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#403919', font: { size: 11 } },
+        },
+      },
+    },
+  });
+}
+
+function setPeriod(p) {
+  chartPeriod = p;
+  document.getElementById('btnWeek').classList.toggle('active',  p === 'week');
+  document.getElementById('btnMonth').classList.toggle('active', p === 'month');
+  initChart();
+}
+
+function unlockEdit() {
+  const email = document.getElementById('gateEmail').value.trim();
+  if (!email || !email.includes('@')) return;
+  document.getElementById('demoGate').style.display = 'none';
+  showToast('Edit mode unlocked (demo session).');
+}
+</script>

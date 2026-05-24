@@ -1,0 +1,149 @@
+<!-- salesorders.html — loaded into #page-frame by index.html -->
+<main>
+  <div class="page-title">Sales Orders</div>
+
+  <div class="form-section">
+    <div class="form-section-title">New Order</div>
+    <div class="form-grid form-grid-4">
+      <div class="form-field">
+        <label class="form-label">SO Number</label>
+        <input class="form-input" id="nsoNum" placeholder="SO-2026-010">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="nsoDate" type="date">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Channel</label>
+        <select class="form-select" id="nsoChannel">
+          <option>Tokopedia</option>
+          <option>Shopee</option>
+          <option>TikTok Shop</option>
+          <option>Direct</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Customer Ref</label>
+        <input class="form-input" id="nsoCustRef" placeholder="e.g. TTK-0500">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Total Qty</label>
+        <input class="form-input" id="nsoQty" type="number" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Total Revenue (IDR)</label>
+        <input class="form-input" id="nsoRevenue" type="number" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="nsoStatus">
+          <option>Pending</option>
+          <option>Fulfilled</option>
+          <option>Cancelled</option>
+        </select>
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="nsoNotes" placeholder="Optional">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitNewOrder()">Create Order</button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <input class="search-input" id="orderSearch" placeholder="Search orders..." oninput="renderOrders()">
+    <button class="cat-pill active" onclick="filterOrderChannel(this, '')">All</button>
+    <button class="cat-pill" onclick="filterOrderChannel(this, 'Tokopedia')">Tokopedia</button>
+    <button class="cat-pill" onclick="filterOrderChannel(this, 'Shopee')">Shopee</button>
+    <button class="cat-pill" onclick="filterOrderChannel(this, 'TikTok Shop')">TikTok Shop</button>
+    <button class="cat-pill" onclick="filterOrderChannel(this, 'Direct')">Direct</button>
+  </div>
+
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>SO Number</th>
+          <th>Date</th>
+          <th>Channel</th>
+          <th>Customer Ref</th>
+          <th>Qty</th>
+          <th>Revenue</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const ORDERS_MOCK = [
+  { 'SO Number':'SO-2026-001',Date:'2026-05-23',Channel:'TikTok Shop','Customer Ref':'TTK-0482','Total Qty':6, 'Total Revenue (IDR)':510000,Status:'Fulfilled' },
+  { 'SO Number':'SO-2026-002',Date:'2026-05-24',Channel:'Shopee',     'Customer Ref':'SHP-2291','Total Qty':12,'Total Revenue (IDR)':540000,Status:'Fulfilled' },
+  { 'SO Number':'SO-2026-003',Date:'2026-05-24',Channel:'Tokopedia',  'Customer Ref':'TOK-1182','Total Qty':10,'Total Revenue (IDR)':850000,Status:'Pending'   },
+  { 'SO Number':'SO-2026-004',Date:'2026-05-22',Channel:'Direct',     'Customer Ref':'WA-ORDER','Total Qty':4, 'Total Revenue (IDR)':480000,Status:'Fulfilled' },
+];
+
+let orderChannelFilter = '';
+
+function init_salesorders() {
+  document.getElementById('nsoDate').value = new Date().toISOString().slice(0, 10);
+  renderOrders();
+}
+
+function renderOrders() {
+  const rows = REKAGO.mode === 'live' ? REKAGO.salesOrders : ORDERS_MOCK;
+  const q    = document.getElementById('orderSearch').value.toLowerCase();
+
+  const filtered = rows.filter(o =>
+    (!orderChannelFilter || o['Channel'] === orderChannelFilter) &&
+    (!q || o['SO Number'].toLowerCase().includes(q) || (o['Customer Ref'] || '').toLowerCase().includes(q))
+  );
+
+  document.getElementById('ordersBody').innerHTML = filtered.length
+    ? filtered.map(o => `<tr>
+        <td><span class="mono">${o['SO Number']}</span></td>
+        <td>${o['Date']}</td>
+        <td>${channelPill(o['Channel'])}</td>
+        <td>${o['Customer Ref'] || ''}</td>
+        <td>${o['Total Qty']}</td>
+        <td>${formatRp(o['Total Revenue (IDR)'])}</td>
+        <td>${statusPill(o['Status'])}</td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="7">No orders found</td></tr>';
+}
+
+function filterOrderChannel(btn, ch) {
+  orderChannelFilter = ch;
+  document.querySelectorAll('#page-frame .cat-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+}
+
+async function submitNewOrder() {
+  if (!requireLive()) return;
+  const payload = {
+    soNumber:     document.getElementById('nsoNum').value.trim(),
+    date:         document.getElementById('nsoDate').value,
+    channel:      document.getElementById('nsoChannel').value,
+    customerRef:  document.getElementById('nsoCustRef').value,
+    totalQty:     document.getElementById('nsoQty').value,
+    totalRevenue: document.getElementById('nsoRevenue').value,
+    status:       document.getElementById('nsoStatus').value,
+    notes:        document.getElementById('nsoNotes').value,
+  };
+  if (!payload.soNumber) { showToast('SO Number is required.', true); return; }
+  const res = await apiPost('createSO', payload);
+  if (res.ok) {
+    showToast('Sales Order created.');
+    await loadAllData();
+    renderOrders();
+  } else {
+    showToast(res.error || 'Error.', true);
+  }
+}
+</script>

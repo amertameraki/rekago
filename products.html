@@ -1,0 +1,154 @@
+<!-- products.html — loaded into #page-frame by index.html -->
+<main>
+  <div class="page-title">Products</div>
+
+  <!-- Add Product form -->
+  <div class="form-section">
+    <div class="form-section-title">Add Product</div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label class="form-label">SKU ID</label>
+        <input class="form-input" id="fpSkuId" placeholder="e.g. BLM-004">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Product Name</label>
+        <input class="form-input" id="fpSkuName" placeholder="e.g. Rattan Basket">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="fpCategory">
+          <option>Gift Set</option>
+          <option>Single Item</option>
+          <option>Multiple Item</option>
+          <option>Bundle</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Unit Price (IDR)</label>
+        <input class="form-input" id="fpUnitPrice" type="number" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Cost Price (IDR)</label>
+        <input class="form-input" id="fpCostPrice" type="number" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Reorder Threshold</label>
+        <input class="form-input" id="fpReorder" type="number" placeholder="10">
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Channels</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item"><input type="checkbox" value="Tokopedia"> Tokopedia</label>
+          <label class="checkbox-item"><input type="checkbox" value="Shopee"> Shopee</label>
+          <label class="checkbox-item"><input type="checkbox" value="TikTok Shop"> TikTok Shop</label>
+          <label class="checkbox-item"><input type="checkbox" value="Direct"> Direct</label>
+        </div>
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="fpNotes" placeholder="Optional">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitAddProduct()">Add Product</button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <input class="search-input" id="productSearch" placeholder="Search products..." oninput="renderProducts()">
+    <button class="cat-pill active" onclick="filterCat(this, '')">All</button>
+    <button class="cat-pill" onclick="filterCat(this, 'Gift Set')">Gift Set</button>
+    <button class="cat-pill" onclick="filterCat(this, 'Single Item')">Single Item</button>
+    <button class="cat-pill" onclick="filterCat(this, 'Multiple Item')">Multiple Item</button>
+    <button class="cat-pill" onclick="filterCat(this, 'Bundle')">Bundle</button>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Product Name</th>
+          <th>Category</th>
+          <th>Channels</th>
+          <th>Unit Price</th>
+          <th>Stock</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="productsBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const PRODUCTS_MOCK = [
+  { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat',    'Category':'Single Item','Channels':'Tokopedia, TikTok Shop',           'Unit Price (IDR)':85000, 'Current Stock':84,'SKU Status':'In Stock'  },
+  { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin',        'Category':'Single Item','Channels':'Shopee, TikTok Shop, Direct',       'Unit Price (IDR)':45000, 'Current Stock':56,'SKU Status':'In Stock'  },
+  { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set', 'Category':'Gift Set',   'Channels':'Tokopedia, Shopee',                 'Unit Price (IDR)':120000,'Current Stock':8, 'SKU Status':'Low Stock' },
+];
+
+let prodCatFilter = '';
+
+function init_products() {
+  renderProducts();
+}
+
+function renderProducts() {
+  const rows = REKAGO.mode === 'live' ? REKAGO.skus : PRODUCTS_MOCK;
+  const q    = document.getElementById('productSearch').value.toLowerCase();
+
+  const filtered = rows.filter(s =>
+    (!prodCatFilter || s['Category'] === prodCatFilter) &&
+    (!q || s['SKU Name'].toLowerCase().includes(q) || s['SKU ID'].toLowerCase().includes(q))
+  );
+
+  document.getElementById('productsBody').innerHTML = filtered.length
+    ? filtered.map(s => {
+        const pills = (s['Channels'] || '').split(',').map(c => channelPill(c.trim())).join('');
+        return `<tr>
+          <td><span class="mono">${s['SKU ID']}</span></td>
+          <td style="font-weight:500">${s['SKU Name']}</td>
+          <td>${s['Category']}</td>
+          <td>${pills}</td>
+          <td>${formatRp(s['Unit Price (IDR)'])}</td>
+          <td>${s['Current Stock']}</td>
+          <td>${statusPill(s['SKU Status'])}</td>
+        </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="7">No products found</td></tr>';
+}
+
+function filterCat(btn, cat) {
+  prodCatFilter = cat;
+  document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProducts();
+}
+
+async function submitAddProduct() {
+  if (!requireLive()) return;
+  const channels = [...document.querySelectorAll('#page-frame input[type=checkbox]:checked')].map(c => c.value);
+  const payload  = {
+    skuId:            document.getElementById('fpSkuId').value.trim(),
+    skuName:          document.getElementById('fpSkuName').value.trim(),
+    category:         document.getElementById('fpCategory').value,
+    channels,
+    unitPrice:        document.getElementById('fpUnitPrice').value,
+    costPrice:        document.getElementById('fpCostPrice').value,
+    reorderThreshold: document.getElementById('fpReorder').value,
+    notes:            document.getElementById('fpNotes').value,
+  };
+  if (!payload.skuId || !payload.skuName) { showToast('SKU ID and name are required.', true); return; }
+  const res = await apiPost('addProduct', payload);
+  if (res.ok) {
+    showToast('Product added.');
+    await loadAllData();
+    renderProducts();
+  } else {
+    showToast(res.error || 'Error adding product.', true);
+  }
+}
+</script>

@@ -1,0 +1,164 @@
+<!-- stockout.html — loaded into #page-frame by index.html -->
+<main>
+  <div class="page-title">Stock Out</div>
+
+  <div class="form-section">
+    <div class="form-section-title">Record Stock Out</div>
+    <div class="form-grid form-grid-4">
+      <div class="form-field">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="soDate" type="date">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Reference ID</label>
+        <input class="form-input" id="soRefId" placeholder="SO-2026-010">
+      </div>
+      <div class="form-field">
+        <label class="form-label">SKU</label>
+        <select class="form-select" id="soSkuId" onchange="populateSoItems()"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Item</label>
+        <select class="form-select" id="soItemId"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Channel</label>
+        <select class="form-select" id="soChannel">
+          <option>Tokopedia</option>
+          <option>Shopee</option>
+          <option>TikTok Shop</option>
+          <option>Direct</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Order Reference</label>
+        <input class="form-input" id="soOrderRef" placeholder="e.g. TTK-0500">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Qty Out</label>
+        <input class="form-input" id="soQty" type="number" placeholder="0" min="1">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Unit Price (IDR)</label>
+        <input class="form-input" id="soUnitPrice" type="number" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="soType">
+          <option>Sold</option>
+          <option>Marketing Sample</option>
+          <option>Damaged</option>
+          <option>Return Inbound</option>
+        </select>
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="soNotes" placeholder="Optional">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitStockOut()">Record Stock Out</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Ref ID</th>
+          <th>SKU</th>
+          <th>Item</th>
+          <th>Channel</th>
+          <th>Qty</th>
+          <th>Revenue</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody id="stockOutBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const SO_MOCK = [
+  { Date:'2026-05-23','Reference ID':'SO-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Channel':'TikTok Shop','Qty Out':6, 'Total Revenue (IDR)':510000,'Type':'Sold' },
+  { Date:'2026-05-24','Reference ID':'SO-2026-002','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Channel':'Shopee',     'Qty Out':12,'Total Revenue (IDR)':540000,'Type':'Sold' },
+  { Date:'2026-05-22','Reference ID':'MKT-001',    'SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Channel':'Direct',     'Qty Out':4, 'Total Revenue (IDR)':480000,'Type':'Sold' },
+];
+
+const ITEMS_MOCK_SO = [
+  { 'SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Item Name':'Rattan Placemat — Natural' },
+  { 'SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Item Name':'Rattan Placemat — Dark' },
+  { 'SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Item Name':'Linen Napkin — Cream' },
+  { 'SKU ID':'BLM-002','Item ID':'BLM-002-SND','Item Name':'Linen Napkin — Sand' },
+  { 'SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Item Name':'Rattan + Napkin Gift Set' },
+];
+
+function init_stockout() {
+  document.getElementById('soDate').value = new Date().toISOString().slice(0, 10);
+  populateSoSkus();
+  renderStockOutTable();
+}
+
+function populateSoSkus() {
+  const skus = REKAGO.mode === 'live' ? REKAGO.skus : [
+    { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat' },
+    { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin' },
+    { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set' },
+  ];
+  document.getElementById('soSkuId').innerHTML =
+    skus.map(s => `<option value="${s['SKU ID']}">${s['SKU ID']} — ${s['SKU Name']}</option>`).join('');
+  populateSoItems();
+}
+
+function populateSoItems() {
+  const skuId = document.getElementById('soSkuId').value;
+  const items = REKAGO.mode === 'live' ? REKAGO.items : ITEMS_MOCK_SO;
+  document.getElementById('soItemId').innerHTML =
+    items.filter(i => i['SKU ID'] === skuId)
+         .map(i => `<option value="${i['Item ID']}">${i['Item ID']} — ${i['Item Name']}</option>`)
+         .join('');
+}
+
+function renderStockOutTable() {
+  const rows = REKAGO.mode === 'live' ? REKAGO.stockOut : SO_MOCK;
+  document.getElementById('stockOutBody').innerHTML = rows.length
+    ? rows.map(r => `<tr>
+        <td>${r.Date}</td>
+        <td><span class="mono">${r['Reference ID']}</span></td>
+        <td><span class="mono">${r['SKU ID']}</span></td>
+        <td>${r['Item ID']}</td>
+        <td>${channelPill(r['Channel'])}</td>
+        <td>${r['Qty Out']}</td>
+        <td>${formatRp(r['Total Revenue (IDR)'])}</td>
+        <td>${r['Type']}</td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="8">No records yet</td></tr>';
+}
+
+async function submitStockOut() {
+  if (!requireLive()) return;
+  const payload = {
+    date:       document.getElementById('soDate').value,
+    refId:      document.getElementById('soRefId').value,
+    skuId:      document.getElementById('soSkuId').value,
+    itemId:     document.getElementById('soItemId').value,
+    channel:    document.getElementById('soChannel').value,
+    orderRef:   document.getElementById('soOrderRef').value,
+    qty:        document.getElementById('soQty').value,
+    unitPrice:  document.getElementById('soUnitPrice').value,
+    type:       document.getElementById('soType').value,
+    notes:      document.getElementById('soNotes').value,
+  };
+  if (!payload.qty || Number(payload.qty) < 1) { showToast('Qty must be at least 1.', true); return; }
+  const res = await apiPost('addStockOut', payload);
+  if (res.ok) {
+    showToast('Stock Out recorded.');
+    await loadAllData();
+    renderStockOutTable();
+  } else {
+    showToast(res.error || 'Error.', true);
+  }
+}
+</script>
