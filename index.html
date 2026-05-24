@@ -7,9 +7,6 @@
 <script src="config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ============================================================
-   DESIGN TOKENS
-   ============================================================ */
 :root {
   --bg:      #FDFAF3;
   --nav:     #403919;
@@ -22,281 +19,150 @@
   --border:  rgba(191,158,59,0.2);
   --text:    #403919;
   --muted:   rgba(64,57,25,0.5);
-
   --ch-tokopedia: #E05E1E;
   --ch-shopee:    #D0001B;
   --ch-tiktok:    #1DAB52;
   --ch-direct:    #1A6A9A;
-
   --radius: 8px;
   --shadow: 0 1px 4px rgba(64,57,25,0.08);
 }
-
-/* ============================================================
-   RESET & BASE
-   ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
-body {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.5;
-}
+body { font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--bg); color: var(--text); line-height: 1.5; }
 button { cursor: pointer; font-family: inherit; }
 input, select, textarea { font-family: inherit; font-size: 13px; }
 
-/* ============================================================
-   NAV
-   ============================================================ */
-nav {
-  background: var(--nav);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  height: 48px;
-  gap: 32px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+/* NAV */
+nav { background: var(--nav); display: flex; align-items: center; padding: 0 24px; height: 48px; gap: 32px; position: sticky; top: 0; z-index: 100; }
 .nav-brand { display: flex; flex-direction: column; line-height: 1.1; min-width: 110px; }
-.nav-brand-name {
-  font-family: 'DM Serif Display', serif;
-  font-size: 18px;
-  color: var(--gold);
-  letter-spacing: -0.3px;
-}
-.nav-brand-sub {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: rgba(242,187,22,0.45);
-}
+.nav-brand-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--gold); letter-spacing: -0.3px; }
+.nav-brand-sub { font-size: 9px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(242,187,22,0.45); }
 .nav-tabs { display: flex; gap: 2px; flex: 1; justify-content: center; }
-.nav-tab {
-  background: none;
-  border: none;
-  color: rgba(242,187,22,0.55);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 6px 14px;
-  border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
-}
+.nav-tab { background: none; border: none; color: rgba(242,187,22,0.55); font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
 .nav-tab:hover { color: var(--gold); background: rgba(242,187,22,0.07); }
 .nav-tab.active { color: var(--nav); background: var(--gold); font-weight: 600; }
-
 .nav-right { display: flex; align-items: center; gap: 10px; min-width: 220px; justify-content: flex-end; }
-.lang-btn {
-  background: none;
-  border: none;
-  color: rgba(242,187,22,0.5);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 6px;
-  border-radius: 4px;
-  transition: color 0.15s;
-}
+.lang-btn { background: none; border: none; color: rgba(242,187,22,0.5); font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 4px; transition: color 0.15s; }
 .lang-btn:hover, .lang-btn.active { color: var(--gold); }
-.demo-badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  color: var(--warn);
-  background: rgba(166,96,10,0.12);
-  padding: 3px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-}
-.btn-trylive {
-  background: var(--gold);
-  color: var(--nav);
-  border: none;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 6px;
-  transition: opacity 0.15s;
-}
+.demo-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: var(--warn); background: rgba(166,96,10,0.12); padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+.btn-trylive { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 6px; transition: opacity 0.15s; }
 .btn-trylive:hover { opacity: 0.88; }
 .live-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-weight: 600; }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-/* ============================================================
-   PAGE FRAME
-   ============================================================ */
-#page-frame { flex: 1; }
+/* LAYOUT */
 #app { display: flex; flex-direction: column; min-height: 100vh; }
+#page-frame { flex: 1; }
 
-/* ============================================================
-   MODAL — TRY LIVE
-   ============================================================ */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(64,57,25,0.45);
-  z-index: 200;
-  align-items: center;
-  justify-content: center;
+/* SPLASH */
+#splash {
+  position: fixed; inset: 0; z-index: 500;
+  background: #403919;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  transition: opacity 0.5s ease;
 }
+#splashWord {
+  font-family: 'DM Serif Display', serif; font-size: 56px; color: #F2BB16;
+  letter-spacing: -1px; opacity: 0; transform: translateY(10px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+#splashSub {
+  font-size: 10px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase;
+  color: rgba(242,187,22,0.4); opacity: 0;
+  transition: opacity 0.5s ease 0.4s;
+}
+#splashTag {
+  font-size: 13px; color: rgba(242,187,22,0.55); margin-top: 4px; opacity: 0;
+  transition: opacity 0.5s ease 0.65s;
+}
+
+/* TOUR */
+#tourBox {
+  display: none; position: fixed; z-index: 401;
+  background: #403919; color: #FDFAF3;
+  border: 1px solid rgba(242,187,22,0.25); border-radius: 10px;
+  padding: 14px 18px; width: 260px;
+  box-shadow: 0 4px 24px rgba(64,57,25,0.3);
+}
+#tourArrow {
+  position: absolute; width: 10px; height: 10px; background: #403919;
+  transform: rotate(45deg);
+}
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(64,57,25,0.45); z-index: 200; align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
-.modal {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 32px;
-  width: 400px;
-  box-shadow: 0 8px 40px rgba(64,57,25,0.18);
-}
+.modal { background: var(--surface); border-radius: 12px; padding: 32px; width: 400px; box-shadow: 0 8px 40px rgba(64,57,25,0.18); }
 .modal-brand { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--gold); margin-bottom: 6px; }
 .modal-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
 .modal-label { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--amber); margin-bottom: 6px; display: block; }
-.modal-input {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 13px;
-  background: var(--bg);
-  color: var(--text);
-  outline: none;
-  transition: border 0.15s;
-}
+.modal-input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; background: var(--bg); color: var(--text); outline: none; transition: border 0.15s; }
 .modal-input:focus { border-color: var(--amber); }
 .modal-error { font-size: 12px; color: var(--danger); margin-top: 8px; min-height: 16px; }
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-.btn-modal-primary {
-  flex: 1;
-  background: var(--gold);
-  color: var(--nav);
-  border: none;
-  font-size: 13px;
-  font-weight: 700;
-  padding: 11px;
-  border-radius: 8px;
-  transition: opacity 0.15s;
-}
+.btn-modal-primary { flex: 1; background: var(--gold); color: var(--nav); border: none; font-size: 13px; font-weight: 700; padding: 11px; border-radius: 8px; transition: opacity 0.15s; }
 .btn-modal-primary:hover { opacity: 0.88; }
-.btn-modal-secondary {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 13px;
-  padding: 11px 18px;
-  border-radius: 8px;
-}
+.btn-modal-secondary { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 13px; padding: 11px 18px; border-radius: 8px; }
 .modal-note { font-size: 11px; color: var(--muted); margin-top: 16px; line-height: 1.5; text-align: center; }
 
-/* ============================================================
-   TOAST
-   ============================================================ */
-.toast {
-  position: fixed;
-  bottom: 24px; right: 24px;
-  background: var(--nav);
-  color: var(--gold);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(64,57,25,0.2);
-  z-index: 300;
-  transform: translateY(80px);
-  opacity: 0;
-  transition: all 0.25s ease;
-  pointer-events: none;
-}
+/* TOAST */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--nav); color: var(--gold); font-size: 13px; font-weight: 500; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(64,57,25,0.2); z-index: 300; transform: translateY(80px); opacity: 0; transition: all 0.25s ease; pointer-events: none; }
 .toast.show { transform: translateY(0); opacity: 1; }
 .toast.error { background: var(--danger); color: #fff; }
 </style>
 </head>
 <body>
-<div id="app">
 
-<nav>
-  <div class="nav-brand">
-    <span class="nav-brand-name">Rekago</span>
-    <span class="nav-brand-sub">재고 · Inventory</span>
-  </div>
-  <div class="nav-tabs">
-    <button class="nav-tab active" onclick="loadPage('dashboard')">Dashboard</button>
-    <button class="nav-tab" onclick="loadPage('products')">Products</button>
-    <button class="nav-tab" onclick="loadPage('stockin')">Stock In</button>
-    <button class="nav-tab" onclick="loadPage('stockout')">Stock Out</button>
-    <button class="nav-tab" onclick="loadPage('salesorders')">Sales Orders</button>
-  </div>
-  <div class="nav-right">
-    <button class="lang-btn active" onclick="setLang('en')">EN</button>
-    <button class="lang-btn" onclick="setLang('id')">ID</button>
-    <button class="lang-btn" onclick="setLang('ko')">한국어</button>
-    <span class="demo-badge" id="modeBadge">DEMO</span>
-    <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Live</button>
-    <div class="live-indicator" id="liveIndicator" style="display:none">
-      <span class="live-dot"></span><span>Live</span>
-    </div>
-  </div>
-</nav>
-
-<div id="page-frame"></div>
-
+<!-- SPLASH — must be first so it covers everything -->
+<div id="splash">
+  <div id="splashWord">Rekago</div>
+  <div id="splashSub">재고 · Inventory</div>
+  <div id="splashTag">Inventory, rekapped.</div>
 </div>
 
-<!-- SPLASH SCREEN -->
-<div id="splash" style="
-  position:fixed;inset:0;z-index:500;
-  background:#403919;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  transition:opacity 0.5s ease;
-">
-  <div id="splashWord" style="
-    font-family:'DM Serif Display',serif;font-size:56px;color:#F2BB16;
-    letter-spacing:-1px;opacity:0;transform:translateY(8px);
-    transition:opacity 0.6s ease,transform 0.6s ease;
-  ">Rekago</div>
-  <div id="splashSub" style="
-    font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;
-    color:rgba(242,187,22,0.4);opacity:0;
-    transition:opacity 0.5s ease 0.3s;
-  ">재고 · Inventory</div>
-  <div id="splashTag" style="
-    font-size:13px;color:rgba(242,187,22,0.55);margin-top:4px;opacity:0;
-    transition:opacity 0.5s ease 0.5s;
-  ">Inventory, rekapped.</div>
-</div>
-
-<!-- TOOLTIP TOUR -->
-<div id="tourOverlay" style="display:none;position:fixed;inset:0;z-index:400;pointer-events:none;"></div>
-<div id="tourBox" style="
-  display:none;position:fixed;z-index:401;
-  background:#403919;color:#FDFAF3;
-  border:1px solid rgba(242,187,22,0.25);border-radius:10px;
-  padding:14px 18px;width:260px;
-  box-shadow:0 4px 24px rgba(64,57,25,0.25);
-  pointer-events:auto;
-">
+<!-- TOUR TOOLTIP -->
+<div id="tourBox">
   <div style="font-size:10px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:rgba(242,187,22,0.5);margin-bottom:4px" id="tourStep"></div>
-  <div style="font-size:13px;font-weight:600;color:#F2BB16;margin-bottom:4px" id="tourTitle"></div>
+  <div style="font-size:13px;font-weight:600;color:#F2BB16;margin-bottom:6px" id="tourTitle"></div>
   <div style="font-size:12px;color:rgba(253,250,243,0.7);line-height:1.5;margin-bottom:14px" id="tourBody"></div>
   <div style="display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;gap:5px" id="tourDots"></div>
     <div style="display:flex;gap:8px">
       <button onclick="skipTour()" style="background:none;border:none;font-size:11px;color:rgba(253,250,243,0.35);cursor:pointer;padding:0">Skip</button>
-      <button onclick="tourNext()" id="tourNextBtn" style="
-        background:#F2BB16;color:#403919;border:none;
-        font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;
-      ">Next</button>
+      <button onclick="tourNext()" id="tourNextBtn" style="background:#F2BB16;color:#403919;border:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer">Next</button>
     </div>
   </div>
-  <div id="tourArrow" style="
-    position:absolute;width:10px;height:10px;background:#403919;
-    border-left:1px solid rgba(242,187,22,0.25);border-top:1px solid rgba(242,187,22,0.25);
-    transform:rotate(45deg);
-  "></div>
+  <div id="tourArrow"></div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app">
+  <nav>
+    <div class="nav-brand">
+      <span class="nav-brand-name">Rekago</span>
+      <span class="nav-brand-sub">재고 · Inventory</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="loadPage('dashboard')">Dashboard</button>
+      <button class="nav-tab" onclick="loadPage('products')">Products</button>
+      <button class="nav-tab" onclick="loadPage('stockin')">Stock In</button>
+      <button class="nav-tab" onclick="loadPage('stockout')">Stock Out</button>
+      <button class="nav-tab" onclick="loadPage('salesorders')">Sales Orders</button>
+    </div>
+    <div class="nav-right">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('id')">ID</button>
+      <button class="lang-btn" onclick="setLang('ko')">한국어</button>
+      <span class="demo-badge" id="modeBadge">DEMO</span>
+      <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Live</button>
+      <div class="live-indicator" id="liveIndicator" style="display:none">
+        <span class="live-dot"></span><span>Live</span>
+      </div>
+    </div>
+  </nav>
+  <div id="page-frame"></div>
 </div>
 
 <!-- TRY LIVE MODAL -->
@@ -307,8 +173,7 @@ nav {
     <div class="modal-sub">Enter your email to access live data from your Google Sheet. Your sheet stays private — Rekago never stores your data.</div>
     <div>
       <label class="modal-label">Your Email</label>
-      <input class="modal-input" id="modalEmail" type="email" placeholder="you@email.com"
-             onkeydown="if(event.key==='Enter') submitLogin()">
+      <input class="modal-input" id="modalEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter') submitLogin()">
       <div class="modal-error" id="modalError"></div>
     </div>
     <div class="modal-actions">
@@ -323,213 +188,17 @@ nav {
 
 <script>
 // ============================================================
-// GLOBAL STATE — shared across all page modules
+// GLOBAL STATE
 // ============================================================
 const REKAGO = {
-  mode:   'demo',   // 'demo' | 'live'
-  email:  null,
-  lang:   'en',
-  // Data cache — populated on live login
-  skus:         [],
-  items:        [],
-  stockIn:      [],
-  stockOut:     [],
-  salesOrders:  [],
+  mode: 'demo', email: null, lang: 'en',
+  skus: [], items: [], stockIn: [], stockOut: [], salesOrders: [],
 };
 
 // ============================================================
-// PAGE LOADER
+// SHARED CSS
 // ============================================================
-const PAGE_CACHE = {};
-
-async function loadPage(name) {
-  // Update nav active state — event may be undefined on auto-load
-  if (typeof event !== 'undefined' && event && event.currentTarget) {
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-  } else {
-    document.querySelectorAll('.nav-tab').forEach(t => {
-      t.classList.toggle('active', t.getAttribute('onclick') && t.getAttribute('onclick').includes("'" + name + "'"));
-    });
-  }
-
-  // Load HTML if not cached
-  if (!PAGE_CACHE[name]) {
-    const res        = await fetch(name + '.html');
-    PAGE_CACHE[name] = await res.text();
-  }
-
-  document.getElementById('page-frame').innerHTML = PAGE_CACHE[name];
-
-  // Run page init if defined
-  if (typeof window['init_' + name] === 'function') {
-    window['init_' + name]();
-  }
-}
-
-// ============================================================
-// LANGUAGE
-// ============================================================
-const COPY = {
-  en: { 'modal.connect': 'Connect' },
-  id: { 'modal.connect': 'Hubungkan' },
-  ko: { 'modal.connect': '연결' },
-};
-
-function setLang(lang) {
-  REKAGO.lang = lang;
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
-  // Broadcast to current page if it has a lang handler
-  if (typeof window.onLangChange === 'function') window.onLangChange(lang);
-}
-
-// ============================================================
-// MODAL — TRY LIVE
-// ============================================================
-function openModal() {
-  document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('modalEmail').focus();
-  document.getElementById('modalError').textContent = '';
-}
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-}
-
-async function submitLogin() {
-  const email  = document.getElementById('modalEmail').value.trim();
-  const errEl  = document.getElementById('modalError');
-  errEl.textContent = '';
-
-  if (!email || !email.includes('@')) {
-    errEl.textContent = 'Enter a valid email address.';
-    return;
-  }
-
-  if (!REKAGO_CONFIG?.gsUrl || REKAGO_CONFIG.gsUrl.includes('YOUR_APPS')) {
-    errEl.textContent = 'Backend not configured. Add your Apps Script URL to config.js.';
-    return;
-  }
-
-  const btn = document.getElementById('btnLogin');
-  btn.textContent = 'Connecting...';
-  btn.disabled    = true;
-
-  try {
-    const res  = await fetch(REKAGO_CONFIG.gsUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'login', email }),
-    });
-    const data = await res.json();
-
-    if (data.ok) {
-      REKAGO.mode  = 'live';
-      REKAGO.email = email;
-      closeModal();
-      setLiveMode();
-      await loadAllData();
-      // Reload current page to reflect live data
-      const activeTab = document.querySelector('.nav-tab.active');
-      if (activeTab) {
-        const pageName = activeTab.textContent.toLowerCase().replace(/\s/g, '');
-        PAGE_CACHE[pageName] = null; // clear cache so it re-inits
-        activeTab.click();
-      }
-      showToast('Connected — live data loaded.');
-    } else {
-      errEl.textContent = data.error || 'Access denied.';
-    }
-  } catch (e) {
-    errEl.textContent = 'Connection failed. Check your config.js URL.';
-  } finally {
-    btn.textContent = 'Connect';
-    btn.disabled    = false;
-  }
-}
-
-function setLiveMode() {
-  document.getElementById('modeBadge').style.display     = 'none';
-  document.getElementById('btnTryLive').style.display    = 'none';
-  document.getElementById('liveIndicator').style.display = 'flex';
-}
-
-// ============================================================
-// DATA — BACKEND CALLS
-// ============================================================
-async function apiGet(action) {
-  const res = await fetch(REKAGO_CONFIG.gsUrl + '?action=' + action);
-  return res.json();
-}
-
-async function apiPost(action, payload) {
-  const res = await fetch(REKAGO_CONFIG.gsUrl, {
-    method: 'POST',
-    body: JSON.stringify({ action, email: REKAGO.email, ...payload }),
-  });
-  return res.json();
-}
-
-async function loadAllData() {
-  const [skus, items, si, so, orders] = await Promise.all([
-    apiGet('getProducts'),
-    apiGet('getItems'),
-    apiPost('getStockIn'),
-    apiPost('getStockOut'),
-    apiPost('getSalesOrders'),
-  ]);
-  if (skus.ok)   REKAGO.skus        = skus.data;
-  if (items.ok)  REKAGO.items       = items.data;
-  if (si.ok)     REKAGO.stockIn     = si.data;
-  if (so.ok)     REKAGO.stockOut    = so.data;
-  if (orders.ok) REKAGO.salesOrders = orders.data;
-}
-
-// ============================================================
-// TOAST
-// ============================================================
-function showToast(msg, isError) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className   = 'toast' + (isError ? ' error' : '') + ' show';
-  setTimeout(() => t.classList.remove('show'), 3200);
-}
-
-// ============================================================
-// SHARED HELPERS (available to all page scripts)
-// ============================================================
-function requireLive() {
-  if (REKAGO.mode !== 'live') {
-    showToast('Connect to live mode first.', true);
-    return false;
-  }
-  return true;
-}
-
-function formatRp(val) {
-  return 'Rp ' + Number(val).toLocaleString('id-ID');
-}
-
-function channelPill(ch) {
-  const cls = ch === 'Tokopedia' ? 'ch-tokopedia'
-            : ch === 'Shopee'    ? 'ch-shopee'
-            : ch === 'TikTok Shop' ? 'ch-tiktok'
-            : 'ch-direct';
-  return `<span class="channel-pill ${cls}">${ch}</span>`;
-}
-
-function statusPill(s) {
-  const cls = s === 'In Stock' || s === 'Fulfilled' ? 'in-stock'
-            : s === 'Low Stock' || s === 'Pending'  ? 'low-stock'
-            : 'out';
-  return `<span class="status-pill ${cls}">${s}</span>`;
-}
-
-// ============================================================
-// SHARED CSS injected once for all pages
-// ============================================================
-const SHARED_CSS = `
-<style>
+const SHARED_CSS = `<style>
   main { padding: 24px; max-width: 1280px; margin: 0 auto; }
   .page-title { font-family: 'DM Serif Display', serif; font-size: 24px; letter-spacing: -0.3px; margin-bottom: 20px; }
   .page-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -583,53 +252,164 @@ const SHARED_CSS = `
   .demo-gate-right { display: flex; align-items: center; gap: 8px; }
   .demo-gate-input { border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; background: var(--surface); color: var(--text); width: 200px; outline: none; }
   .btn-unlock { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 6px; cursor: pointer; }
-</style>
-`;
+</style>`;
 
 // ============================================================
-// BOOT — splash → dashboard → tour
+// PAGE LOADER
 // ============================================================
-window.addEventListener('DOMContentLoaded', () => {
-  document.head.insertAdjacentHTML('beforeend', SHARED_CSS);
-  runSplash();
-});
+const PAGE_CACHE = {};
 
-function runSplash() {
-  const splash   = document.getElementById('splash');
-  const word     = document.getElementById('splashWord');
-  const sub      = document.getElementById('splashSub');
-  const tag      = document.getElementById('splashTag');
-
-  // Animate in
-  requestAnimationFrame(() => {
-    word.style.opacity   = '1';
-    word.style.transform = 'translateY(0)';
-    sub.style.opacity    = '1';
-    tag.style.opacity    = '1';
-  });
-
-  // After 2s — fade out splash, load dashboard
-  setTimeout(() => {
-    splash.style.opacity = '0';
-    splash.style.pointerEvents = 'none';
-    loadPage('dashboard').then(() => {
-      setTimeout(() => {
-        splash.style.display = 'none';
-        maybeStartTour();
-      }, 500);
+async function loadPage(name) {
+  // Update nav active state
+  if (typeof event !== 'undefined' && event && event.currentTarget) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  } else {
+    document.querySelectorAll('.nav-tab').forEach(t => {
+      t.classList.toggle('active', !!(t.getAttribute('onclick') && t.getAttribute('onclick').includes("'" + name + "'")));
     });
+  }
+  if (!PAGE_CACHE[name]) {
+    const res        = await fetch(name + '.html');
+    PAGE_CACHE[name] = await res.text();
+  }
+  document.getElementById('page-frame').innerHTML = PAGE_CACHE[name];
+  if (typeof window['init_' + name] === 'function') window['init_' + name]();
+}
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+function setLang(lang) {
+  REKAGO.lang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+  if (typeof window.onLangChange === 'function') window.onLangChange(lang);
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalEmail').focus();
+  document.getElementById('modalError').textContent = '';
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+async function submitLogin() {
+  const email = document.getElementById('modalEmail').value.trim();
+  const errEl = document.getElementById('modalError');
+  errEl.textContent = '';
+  if (!email || !email.includes('@')) { errEl.textContent = 'Enter a valid email address.'; return; }
+  if (!window.REKAGO_CONFIG?.gsUrl || REKAGO_CONFIG.gsUrl.includes('YOUR_APPS')) {
+    errEl.textContent = 'Backend not configured. Add your Apps Script URL to config.js.'; return;
+  }
+  const btn = document.getElementById('btnLogin');
+  btn.textContent = 'Connecting...'; btn.disabled = true;
+  try {
+    const res  = await fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action: 'login', email }) });
+    const data = await res.json();
+    if (data.ok) {
+      REKAGO.mode = 'live'; REKAGO.email = email;
+      closeModal(); setLiveMode(); await loadAllData();
+      const activeTab = document.querySelector('.nav-tab.active');
+      if (activeTab) { const n = activeTab.textContent.toLowerCase().replace(/\s/g,''); PAGE_CACHE[n] = null; activeTab.click(); }
+      showToast('Connected — live data loaded.');
+    } else { errEl.textContent = data.error || 'Access denied.'; }
+  } catch (e) { errEl.textContent = 'Connection failed. Check your config.js URL.'; }
+  finally { btn.textContent = 'Connect'; btn.disabled = false; }
+}
+function setLiveMode() {
+  document.getElementById('modeBadge').style.display     = 'none';
+  document.getElementById('btnTryLive').style.display    = 'none';
+  document.getElementById('liveIndicator').style.display = 'flex';
+}
+
+// ============================================================
+// DATA
+// ============================================================
+async function apiGet(action) {
+  return fetch(REKAGO_CONFIG.gsUrl + '?action=' + action).then(r => r.json());
+}
+async function apiPost(action, payload) {
+  return fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action, email: REKAGO.email, ...payload }) }).then(r => r.json());
+}
+async function loadAllData() {
+  const [skus, items, si, so, orders] = await Promise.all([
+    apiGet('getProducts'), apiGet('getItems'),
+    apiPost('getStockIn'), apiPost('getStockOut'), apiPost('getSalesOrders'),
+  ]);
+  if (skus.ok)   REKAGO.skus        = skus.data;
+  if (items.ok)  REKAGO.items       = items.data;
+  if (si.ok)     REKAGO.stockIn     = si.data;
+  if (so.ok)     REKAGO.stockOut    = so.data;
+  if (orders.ok) REKAGO.salesOrders = orders.data;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function requireLive() {
+  if (REKAGO.mode !== 'live') { showToast('Connect to live mode first.', true); return false; }
+  return true;
+}
+function formatRp(val) { return 'Rp ' + Number(val).toLocaleString('id-ID'); }
+function channelPill(ch) {
+  const cls = ch === 'Tokopedia' ? 'ch-tokopedia' : ch === 'Shopee' ? 'ch-shopee' : ch === 'TikTok Shop' ? 'ch-tiktok' : 'ch-direct';
+  return `<span class="channel-pill ${cls}">${ch}</span>`;
+}
+function statusPill(s) {
+  const cls = s === 'In Stock' || s === 'Fulfilled' ? 'in-stock' : s === 'Low Stock' || s === 'Pending' ? 'low-stock' : 'out';
+  return `<span class="status-pill ${cls}">${s}</span>`;
+}
+
+// ============================================================
+// SPLASH
+// ============================================================
+function runSplash() {
+  const splash = document.getElementById('splash');
+
+  // Trigger CSS transitions — use double rAF to ensure paint first
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.getElementById('splashWord').style.opacity   = '1';
+    document.getElementById('splashWord').style.transform = 'translateY(0)';
+    document.getElementById('splashSub').style.opacity    = '1';
+    document.getElementById('splashTag').style.opacity    = '1';
+  }));
+
+  // After 2s — fade out and load dashboard
+  setTimeout(async () => {
+    splash.style.opacity        = '0';
+    splash.style.pointerEvents  = 'none';
+    await loadPage('dashboard');
+    // Wait for fade-out to finish, then remove splash and start tour
+    setTimeout(() => {
+      splash.style.display = 'none';
+      maybeStartTour();
+    }, 500);
   }, 2000);
 }
 
 // ============================================================
-// TOOLTIP TOUR — first visit only
+// TOOLTIP TOUR
 // ============================================================
 const TOUR_KEY = 'rekago_tour_done';
-
 const TOUR_STEPS = [
   {
     title:  'Dashboard',
-    body:   'Your inventory at a glance. SKU counts, low stock alerts, and revenue vs orders — all updated live when connected.',
+    body:   'Your inventory at a glance — SKU counts, low stock alerts, and revenue vs orders. Updates live when connected.',
     target: () => document.querySelector('.nav-tab[onclick*="dashboard"]'),
     pos:    'below',
   },
@@ -640,14 +420,14 @@ const TOUR_STEPS = [
     pos:    'right',
   },
   {
-    title:  'Revenue & Orders chart',
-    body:   'Bars track revenue (Rp), the line tracks order count. Switch between Week and Month view.',
+    title:  'Revenue & Orders',
+    body:   'Bars track revenue (Rp), the line tracks order count. Toggle between Week and Month view.',
     target: () => document.querySelector('.period-btn'),
     pos:    'below',
   },
   {
     title:  'Products',
-    body:   'Add SKUs, manage categories and channels, track cost vs unit price per product.',
+    body:   'Add SKUs, set categories and channels, track cost vs unit price per product.',
     target: () => document.querySelector('.nav-tab[onclick*="products"]'),
     pos:    'below',
   },
@@ -670,7 +450,8 @@ let tourIndex = 0;
 function maybeStartTour() {
   if (localStorage.getItem(TOUR_KEY)) return;
   tourIndex = 0;
-  showTourStep();
+  // Small delay so dashboard renders fully before we measure element positions
+  setTimeout(showTourStep, 300);
 }
 
 function showTourStep() {
@@ -681,32 +462,25 @@ function showTourStep() {
 
   if (!target) { tourNext(); return; }
 
-  // Populate content
   document.getElementById('tourStep').textContent  = (tourIndex + 1) + ' of ' + TOUR_STEPS.length;
   document.getElementById('tourTitle').textContent = step.title;
   document.getElementById('tourBody').textContent  = step.body;
-  document.getElementById('tourNextBtn').textContent =
-    tourIndex === TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+  document.getElementById('tourNextBtn').textContent = tourIndex === TOUR_STEPS.length - 1 ? 'Done' : 'Next';
 
-  // Dots
-  const dots = document.getElementById('tourDots');
-  dots.innerHTML = TOUR_STEPS.map((_, i) =>
-    `<div style="width:6px;height:6px;border-radius:50%;background:${i===tourIndex?'#F2BB16':'rgba(242,187,22,0.2)'}"></div>`
+  document.getElementById('tourDots').innerHTML = TOUR_STEPS.map((_, i) =>
+    `<div style="width:6px;height:6px;border-radius:50%;background:${i === tourIndex ? '#F2BB16' : 'rgba(242,187,22,0.2)'}"></div>`
   ).join('');
 
   box.style.display = 'block';
 
-  // Position relative to target
   const r   = target.getBoundingClientRect();
   const bw  = 260;
   const bh  = box.offsetHeight || 160;
   const gap = 12;
   let top, left;
 
-  arrow.style.top    = '';
-  arrow.style.bottom = '';
-  arrow.style.left   = '';
-  arrow.style.right  = '';
+  // Reset arrow styles
+  arrow.style.cssText = 'position:absolute;width:10px;height:10px;background:#403919;transform:rotate(45deg);';
 
   if (step.pos === 'below' || step.pos === 'below-left') {
     top  = r.bottom + gap;
@@ -714,33 +488,27 @@ function showTourStep() {
          ? Math.min(r.right - bw, window.innerWidth - bw - 16)
          : r.left;
     left = Math.max(8, left);
-    arrow.style.top  = '-6px';
-    arrow.style.left = Math.min(r.left + r.width / 2 - left - 5, bw - 20) + 'px';
-    arrow.style.transform = 'rotate(45deg)';
-    arrow.style.borderLeft = '1px solid rgba(242,187,22,0.25)';
-    arrow.style.borderTop  = '1px solid rgba(242,187,22,0.25)';
-    arrow.style.borderRight  = 'none';
-    arrow.style.borderBottom = 'none';
+    const arrowLeft = Math.min(r.left + r.width / 2 - left - 5, bw - 20);
+    arrow.style.top         = '-6px';
+    arrow.style.left        = arrowLeft + 'px';
+    arrow.style.borderLeft  = '1px solid rgba(242,187,22,0.25)';
+    arrow.style.borderTop   = '1px solid rgba(242,187,22,0.25)';
   } else if (step.pos === 'right') {
     top  = r.top + r.height / 2 - bh / 2;
     left = r.right + gap;
     if (left + bw > window.innerWidth - 8) left = r.left - bw - gap;
-    arrow.style.top    = (bh / 2 - 5) + 'px';
-    arrow.style.left   = '-6px';
-    arrow.style.transform = 'rotate(-45deg)';
-    arrow.style.borderLeft = '1px solid rgba(242,187,22,0.25)';
+    arrow.style.top          = (bh / 2 - 5) + 'px';
+    arrow.style.left         = '-6px';
+    arrow.style.transform    = 'rotate(-45deg)';
+    arrow.style.borderLeft   = '1px solid rgba(242,187,22,0.25)';
     arrow.style.borderBottom = '1px solid rgba(242,187,22,0.25)';
-    arrow.style.borderTop  = 'none';
-    arrow.style.borderRight = 'none';
   }
 
-  // Clamp vertically
   top = Math.max(60, Math.min(top, window.innerHeight - bh - 16));
-
   box.style.top  = top  + 'px';
   box.style.left = left + 'px';
 
-  // Highlight target
+  // Highlight
   target.style.outline       = '2px solid #F2BB16';
   target.style.outlineOffset = '3px';
   target.style.borderRadius  = '4px';
@@ -749,11 +517,10 @@ function showTourStep() {
 
 function clearHighlight() {
   TOUR_STEPS.forEach(s => {
-    const t = s.target();
+    const t = s.target ? s.target() : null;
     if (t && t._tourHighlighted) {
-      t.style.outline      = '';
-      t.style.outlineOffset = '';
-      t._tourHighlighted   = false;
+      t.style.outline = ''; t.style.outlineOffset = '';
+      t._tourHighlighted = false;
     }
   });
 }
@@ -761,11 +528,8 @@ function clearHighlight() {
 function tourNext() {
   clearHighlight();
   tourIndex++;
-  if (tourIndex >= TOUR_STEPS.length) {
-    skipTour();
-  } else {
-    showTourStep();
-  }
+  if (tourIndex >= TOUR_STEPS.length) skipTour();
+  else showTourStep();
 }
 
 function skipTour() {
@@ -773,6 +537,14 @@ function skipTour() {
   document.getElementById('tourBox').style.display = 'none';
   localStorage.setItem(TOUR_KEY, '1');
 }
+
+// ============================================================
+// BOOT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  document.head.insertAdjacentHTML('beforeend', SHARED_CSS);
+  runSplash();
+});
 </script>
 </body>
 </html>
