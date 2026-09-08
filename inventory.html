@@ -1,0 +1,571 @@
+<!-- inventory.html - read-only Inventory Management capability preview -->
+<main>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px">
+    <div>
+      <div class="page-title" style="margin-bottom:2px">Inventory</div>
+      <div class="page-meta" id="inventoryMeta">Catalogue and stock balances</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-secondary" onclick="inventoryToggleImport()">Import JSON</button>
+      <button class="btn-primary" onclick="inventoryResetData()">Use sample data</button>
+    </div>
+  </div>
+
+  <div class="demo-gate" id="inventoryImportPanel" style="display:none;align-items:flex-start">
+    <div class="demo-gate-text" style="max-width:420px">
+      <strong>Import Inventory Management data</strong>
+      <p>Paste a JSON array from getCatalogue, getProducts, or getStockSummary. This preview stores it only in this browser.</p>
+    </div>
+    <div style="display:flex;gap:8px;flex:1;align-items:flex-start">
+      <textarea class="form-input" id="inventoryJsonInput" rows="4" placeholder='[{"sku":"BLM-001","productName":"Rattan Placemat","availableStock":84}]'></textarea>
+      <button class="btn-unlock" onclick="inventoryImportJson()">Import</button>
+    </div>
+  </div>
+
+  <div class="inventory-metrics">
+    <div class="metric-tile">
+      <span>Total SKUs</span>
+      <strong id="inventoryMetricSkus">0</strong>
+      <small>catalogue items</small>
+    </div>
+    <div class="metric-tile">
+      <span>Physical Stock</span>
+      <strong id="inventoryMetricPhysical">0</strong>
+      <small>units in warehouse</small>
+    </div>
+    <div class="metric-tile">
+      <span>Committed</span>
+      <strong id="inventoryMetricCommitted">0</strong>
+      <small>units on confirmed orders</small>
+    </div>
+    <div class="metric-tile warn">
+      <span>Reorder Alerts</span>
+      <strong id="inventoryMetricReorder">0</strong>
+      <small>below threshold</small>
+    </div>
+    <div class="metric-tile source">
+      <span>Data Source</span>
+      <strong id="inventoryMetricSource">Sample</strong>
+      <small id="inventoryMetricSourceNote">preview mode</small>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <input class="search-input" id="inventorySearch" placeholder="Search SKU, product, brand..." oninput="inventoryRender()">
+    <select class="form-select inventory-select" id="inventoryBrandFilter" onchange="inventoryRender()"></select>
+    <select class="form-select inventory-select" id="inventoryClassFilter" onchange="inventoryRender()"></select>
+    <button class="cat-pill active" id="inventoryStatusAll" onclick="inventorySetStatus('', this)">All</button>
+    <button class="cat-pill" onclick="inventorySetStatus('low', this)">Low stock</button>
+    <button class="cat-pill" onclick="inventorySetStatus('out', this)">Out</button>
+    <div style="margin-left:auto;display:flex;gap:4px">
+      <button class="period-btn active" id="inventoryGridBtn" onclick="inventorySetView('grid')">Grid</button>
+      <button class="period-btn" id="inventoryTableBtn" onclick="inventorySetView('table')">Table</button>
+    </div>
+  </div>
+
+  <section id="inventoryGrid" class="inventory-grid"></section>
+
+  <section id="inventoryTable" class="card" style="display:none">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Product</th>
+          <th>Brand</th>
+          <th>Class</th>
+          <th>Physical</th>
+          <th>Committed</th>
+          <th>Available</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="inventoryTableBody"></tbody>
+    </table>
+  </section>
+</main>
+
+<style>
+.inventory-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.metric-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+}
+.metric-tile.warn { border-left: 3px solid var(--warn); }
+.metric-tile.source { border-left: 3px solid var(--ok); }
+.metric-tile span {
+  display: block;
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+.metric-tile strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+.metric-tile.source strong { font-size: 19px; line-height: 1.25; }
+.metric-tile small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.inventory-select { width: 160px; background: var(--surface); }
+.period-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  transition: all 0.15s;
+}
+.period-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--nav);
+}
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.inventory-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 238px;
+  overflow: hidden;
+}
+.inventory-card-top {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 14px;
+  padding: 16px 18px 12px;
+}
+.inventory-image {
+  align-items: center;
+  aspect-ratio: 1;
+  background: rgba(191,158,59,0.08);
+  border: 1px solid rgba(191,158,59,0.12);
+  border-radius: 6px;
+  color: var(--amber);
+  display: flex;
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  justify-content: center;
+  overflow: hidden;
+}
+.inventory-image img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+.inventory-card h3 {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 2px 0 6px;
+}
+.inventory-meta-line {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.inventory-card-bottom {
+  border-top: 1px solid rgba(191,158,59,0.12);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: auto;
+}
+.stock-cell {
+  padding: 12px 14px;
+}
+.stock-cell + .stock-cell { border-left: 1px solid rgba(191,158,59,0.12); }
+.stock-cell span {
+  color: var(--amber);
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.stock-cell strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.inventory-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 18px 14px;
+}
+.price-tag {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.inventory-empty {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  grid-column: 1 / -1;
+  padding: 34px;
+  text-align: center;
+}
+@media (max-width: 980px) {
+  .inventory-metrics, .inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .inventory-metrics, .inventory-grid { grid-template-columns: 1fr; }
+  .inventory-select, .search-input { width: 100%; }
+}
+</style>
+
+<script>
+const INVENTORY_STORAGE_KEY = 'rekago_inventory_preview_data';
+let inventoryProducts = [];
+let inventoryStatusFilter = '';
+let inventoryView = 'grid';
+let inventorySource = { label: 'Sample', note: 'preview mode' };
+
+const INVENTORY_SAMPLE = [
+  {
+    sku: 'BLM-001',
+    productName: 'Rattan Placemat',
+    brand: 'Blum in Drem',
+    classification: 'Tableware',
+    barcode: '899100010001',
+    size: '38',
+    sizeType: 'cm',
+    material: 'Rattan',
+    unitType: 'Piece',
+    unitsPerCarton: 24,
+    priceIDR: 85000,
+    physicalStock: 96,
+    committedUnits: 12,
+    availableStock: 84,
+    reorderThreshold: 20,
+  },
+  {
+    sku: 'BLM-002',
+    productName: 'Linen Napkin',
+    brand: 'Blum in Drem',
+    classification: 'Textile',
+    barcode: '899100010002',
+    size: '45',
+    sizeType: 'cm',
+    material: 'Linen',
+    unitType: 'Piece',
+    unitsPerCarton: 50,
+    priceIDR: 45000,
+    physicalStock: 65,
+    committedUnits: 9,
+    availableStock: 56,
+    reorderThreshold: 15,
+  },
+  {
+    sku: 'BLM-003',
+    productName: 'Rattan + Napkin Set',
+    brand: 'Blum in Drem',
+    classification: 'Gift Set',
+    barcode: '899100010003',
+    size: 'Set',
+    sizeType: '',
+    material: 'Rattan, Linen',
+    unitType: 'Set',
+    unitsPerCarton: 12,
+    priceIDR: 120000,
+    physicalStock: 11,
+    committedUnits: 3,
+    availableStock: 8,
+    reorderThreshold: 10,
+  },
+  {
+    sku: 'BLM-004',
+    productName: 'Woven Basket',
+    brand: 'Blum in Drem',
+    classification: 'Storage',
+    barcode: '899100010004',
+    size: 'Medium',
+    sizeType: '',
+    material: 'Rattan',
+    unitType: 'Piece',
+    unitsPerCarton: 8,
+    priceIDR: 160000,
+    physicalStock: 0,
+    committedUnits: 0,
+    availableStock: 0,
+    reorderThreshold: 6,
+  },
+];
+
+async function init_inventory() {
+  if (REKAGO.mode === 'live' && !REKAGO.skus.length) await loadAllData();
+  const loaded = inventoryLoadData();
+  inventoryProducts = loaded.rows;
+  inventorySource = loaded.source;
+  inventoryPopulateFilters();
+  inventoryRender();
+}
+
+function inventoryLoadData() {
+  if (REKAGO.mode === 'live' && REKAGO.skus.length) {
+    return {
+      rows: REKAGO.skus.map(inventoryNormalizeProduct),
+      source: {
+        label: 'Live',
+        note: REKAGO.email || 'Google Sheet',
+      },
+    };
+  }
+
+  const saved = localStorage.getItem(INVENTORY_STORAGE_KEY);
+  if (!saved) {
+    return {
+      rows: INVENTORY_SAMPLE.map(inventoryNormalizeProduct),
+      source: {
+        label: 'Sample',
+        note: 'preview mode',
+      },
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(saved);
+    return {
+      rows: inventoryNormalizeRows(parsed),
+      source: {
+        label: 'Imported',
+        note: 'browser preview',
+      },
+    };
+  } catch (e) {
+    localStorage.removeItem(INVENTORY_STORAGE_KEY);
+    return {
+      rows: INVENTORY_SAMPLE.map(inventoryNormalizeProduct),
+      source: {
+        label: 'Sample',
+        note: 'preview mode',
+      },
+    };
+  }
+}
+
+function inventoryNormalizeRows(payload) {
+  const rows = Array.isArray(payload) ? payload : payload?.data || payload?.products || payload?.items || [];
+  return rows.map(inventoryNormalizeProduct).filter(item => item.sku);
+}
+
+function inventoryNormalizeProduct(row) {
+  const physical = inventoryNumber(row.physicalStock ?? row['Physical Stock'] ?? row.currentStock ?? row['Current Stock'] ?? row.availableStock ?? row['Available Stock']);
+  const committed = inventoryNumber(row.committedUnits ?? row['Committed Units'] ?? row.committed ?? row['Committed'] ?? 0);
+  const available = inventoryNumber(row.availableStock ?? row['Available Stock'] ?? Math.max(physical - committed, 0));
+  const threshold = inventoryNumber(row.reorderThreshold ?? row['Reorder Threshold'] ?? 0);
+  const reorderFlag = row.reorderFlag ?? row['Reorder Flag'] ?? (threshold > 0 && available <= threshold);
+
+  return {
+    sku: String(row.sku ?? row.SKU ?? row['SKU ID'] ?? '').trim(),
+    productName: String(row.productName ?? row.name ?? row['Product Name'] ?? row['SKU Name'] ?? '').trim(),
+    brand: String(row.brand ?? row.Brand ?? 'Rekago').trim(),
+    classification: String(row.classification ?? row.Category ?? row.category ?? 'Unclassified').trim(),
+    barcode: String(row.barcode ?? row.Barcode ?? '').trim(),
+    imageUrl: String(row.imageUrl ?? row['Image URL'] ?? '').trim(),
+    size: String(row.size ?? row.Size ?? '').trim(),
+    sizeType: String(row.sizeType ?? row['Size Type'] ?? '').trim(),
+    material: String(row.material ?? row.Material ?? '').trim(),
+    unitType: String(row.unitType ?? row['Unit Type'] ?? 'Unit').trim(),
+    unitsPerCarton: inventoryNumber(row.unitsPerCarton ?? row['Units Per Carton'] ?? 0),
+    priceIDR: inventoryNumber(row.finalPrice ?? row.srp ?? row.priceIDR ?? row['Unit Price (IDR)'] ?? row['Price IDR'] ?? 0),
+    physicalStock: physical,
+    committedUnits: committed,
+    availableStock: available,
+    reorderThreshold: threshold,
+    reorderFlag: reorderFlag === true || String(reorderFlag).toLowerCase() === 'true',
+  };
+}
+
+function inventoryNumber(value) {
+  const number = Number(String(value ?? 0).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(number) ? number : 0;
+}
+
+function inventoryPopulateFilters() {
+  const brandFilter = document.getElementById('inventoryBrandFilter');
+  const classFilter = document.getElementById('inventoryClassFilter');
+  const brands = [...new Set(inventoryProducts.map(p => p.brand).filter(Boolean))].sort();
+  const classes = [...new Set(inventoryProducts.map(p => p.classification).filter(Boolean))].sort();
+  brandFilter.innerHTML = '<option value="">All brands</option>' + brands.map(v => `<option value="${inventoryEscape(v)}">${inventoryEscape(v)}</option>`).join('');
+  classFilter.innerHTML = '<option value="">All classes</option>' + classes.map(v => `<option value="${inventoryEscape(v)}">${inventoryEscape(v)}</option>`).join('');
+}
+
+function inventoryRender() {
+  const rows = inventoryFilteredRows();
+  inventoryRenderMetrics();
+  inventoryRenderGrid(rows);
+  inventoryRenderTable(rows);
+  document.getElementById('inventoryGrid').style.display = inventoryView === 'grid' ? 'grid' : 'none';
+  document.getElementById('inventoryTable').style.display = inventoryView === 'table' ? 'block' : 'none';
+  document.getElementById('inventoryMeta').textContent = `${rows.length} shown from ${inventoryProducts.length} SKUs`;
+}
+
+function inventoryFilteredRows() {
+  const q = document.getElementById('inventorySearch').value.trim().toLowerCase();
+  const brand = document.getElementById('inventoryBrandFilter').value;
+  const classification = document.getElementById('inventoryClassFilter').value;
+  return inventoryProducts.filter(product => {
+    const haystack = [product.sku, product.productName, product.brand, product.classification, product.barcode].join(' ').toLowerCase();
+    const status = inventoryStockStatus(product);
+    return (!q || haystack.includes(q))
+      && (!brand || product.brand === brand)
+      && (!classification || product.classification === classification)
+      && (!inventoryStatusFilter || status.key === inventoryStatusFilter);
+  });
+}
+
+function inventoryRenderMetrics() {
+  const physical = inventoryProducts.reduce((sum, item) => sum + item.physicalStock, 0);
+  const committed = inventoryProducts.reduce((sum, item) => sum + item.committedUnits, 0);
+  const reorder = inventoryProducts.filter(item => inventoryStockStatus(item).key === 'low' || inventoryStockStatus(item).key === 'out').length;
+  document.getElementById('inventoryMetricSkus').textContent = inventoryProducts.length;
+  document.getElementById('inventoryMetricPhysical').textContent = physical.toLocaleString('id-ID');
+  document.getElementById('inventoryMetricCommitted').textContent = committed.toLocaleString('id-ID');
+  document.getElementById('inventoryMetricReorder').textContent = reorder;
+  document.getElementById('inventoryMetricSource').textContent = inventorySource.label;
+  document.getElementById('inventoryMetricSourceNote').textContent = inventorySource.note;
+}
+
+function inventoryRenderGrid(rows) {
+  document.getElementById('inventoryGrid').innerHTML = rows.length
+    ? rows.map(product => {
+        const status = inventoryStockStatus(product);
+        return `<article class="inventory-card">
+          <div class="inventory-card-top">
+            <div class="inventory-image">${inventoryImage(product)}</div>
+            <div>
+              <div class="mono">${inventoryEscape(product.sku)}</div>
+              <h3>${inventoryEscape(product.productName || 'Untitled product')}</h3>
+              <div class="inventory-meta-line">${inventoryEscape(product.brand)} / ${inventoryEscape(product.classification)}</div>
+              <div class="inventory-meta-line">${inventoryEscape([product.size, product.sizeType].filter(Boolean).join(' '))}${product.material ? ' / ' + inventoryEscape(product.material) : ''}</div>
+            </div>
+          </div>
+          <div class="inventory-footer">
+            <span class="price-tag">${formatRp(product.priceIDR)}</span>
+            ${statusPill(status.label)}
+          </div>
+          <div class="inventory-card-bottom">
+            <div class="stock-cell"><span>Physical</span><strong>${product.physicalStock.toLocaleString('id-ID')}</strong></div>
+            <div class="stock-cell"><span>Committed</span><strong>${product.committedUnits.toLocaleString('id-ID')}</strong></div>
+            <div class="stock-cell"><span>Available</span><strong>${product.availableStock.toLocaleString('id-ID')}</strong></div>
+          </div>
+        </article>`;
+      }).join('')
+    : '<div class="inventory-empty">No inventory found</div>';
+}
+
+function inventoryRenderTable(rows) {
+  document.getElementById('inventoryTableBody').innerHTML = rows.length
+    ? rows.map(product => {
+        const status = inventoryStockStatus(product);
+        return `<tr>
+          <td><span class="mono">${inventoryEscape(product.sku)}</span></td>
+          <td style="font-weight:500">${inventoryEscape(product.productName || 'Untitled product')}</td>
+          <td>${inventoryEscape(product.brand)}</td>
+          <td>${inventoryEscape(product.classification)}</td>
+          <td>${product.physicalStock.toLocaleString('id-ID')}</td>
+          <td>${product.committedUnits.toLocaleString('id-ID')}</td>
+          <td>${product.availableStock.toLocaleString('id-ID')}</td>
+          <td>${statusPill(status.label)}</td>
+        </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="8">No inventory found</td></tr>';
+}
+
+function inventoryImage(product) {
+  if (product.imageUrl) return `<img src="${inventoryEscape(product.imageUrl)}" alt="">`;
+  const initials = (product.productName || product.sku || 'R').split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  return `<span>${inventoryEscape(initials)}</span>`;
+}
+
+function inventoryStockStatus(product) {
+  if (product.availableStock <= 0) return { key: 'out', label: 'Out of Stock' };
+  if (product.reorderFlag || (product.reorderThreshold > 0 && product.availableStock <= product.reorderThreshold)) return { key: 'low', label: 'Low Stock' };
+  return { key: 'ok', label: 'In Stock' };
+}
+
+function inventorySetStatus(status, btn) {
+  inventoryStatusFilter = status;
+  document.querySelectorAll('.filter-bar .cat-pill').forEach(item => item.classList.remove('active'));
+  btn.classList.add('active');
+  inventoryRender();
+}
+
+function inventorySetView(view) {
+  inventoryView = view;
+  document.getElementById('inventoryGridBtn').classList.toggle('active', view === 'grid');
+  document.getElementById('inventoryTableBtn').classList.toggle('active', view === 'table');
+  inventoryRender();
+}
+
+function inventoryToggleImport() {
+  const panel = document.getElementById('inventoryImportPanel');
+  panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+}
+
+function inventoryImportJson() {
+  const input = document.getElementById('inventoryJsonInput');
+  try {
+    const rows = inventoryNormalizeRows(JSON.parse(input.value));
+    if (!rows.length) throw new Error('No rows');
+    localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(rows));
+    inventoryProducts = rows;
+    inventorySource = { label: 'Imported', note: 'browser preview' };
+    inventoryPopulateFilters();
+    inventoryRender();
+    showToast('Inventory data imported.');
+  } catch (e) {
+    showToast('Paste a valid inventory JSON array.', true);
+  }
+}
+
+function inventoryResetData() {
+  localStorage.removeItem(INVENTORY_STORAGE_KEY);
+  document.getElementById('inventoryJsonInput').value = '';
+  const loaded = inventoryLoadData();
+  inventoryProducts = loaded.rows;
+  inventorySource = loaded.source;
+  inventoryPopulateFilters();
+  inventoryRender();
+  showToast(REKAGO.mode === 'live' ? 'Live inventory restored.' : 'Sample inventory restored.');
+}
+
+function inventoryEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
+}
+</script>

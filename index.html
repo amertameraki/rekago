@@ -147,6 +147,8 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
     <div class="nav-tabs">
       <button class="nav-tab active" onclick="loadPage('dashboard')">Dashboard</button>
       <button class="nav-tab" onclick="loadPage('products')">Products</button>
+      <button class="nav-tab" onclick="loadPage('inventory')">Inventory</button>
+      <button class="nav-tab" onclick="loadPage('packinglists')">Packing Lists</button>
       <button class="nav-tab" onclick="loadPage('stockin')">Stock In</button>
       <button class="nav-tab" onclick="loadPage('stockout')">Stock Out</button>
       <button class="nav-tab" onclick="loadPage('salesorders')">Sales Orders</button>
@@ -258,6 +260,7 @@ const SHARED_CSS = `<style>
 // PAGE LOADER
 // ============================================================
 const PAGE_CACHE = {};
+const PAGE_SCRIPTS_LOADED = {};
 
 async function loadPage(name) {
   // Update nav active state
@@ -273,7 +276,21 @@ async function loadPage(name) {
     const res        = await fetch(name + '.html');
     PAGE_CACHE[name] = await res.text();
   }
-  document.getElementById('page-frame').innerHTML = PAGE_CACHE[name];
+  const frame = document.getElementById('page-frame');
+  frame.innerHTML = PAGE_CACHE[name];
+  if (!PAGE_SCRIPTS_LOADED[name]) {
+    for (const oldScript of frame.querySelectorAll('script')) {
+      const script = document.createElement('script');
+      [...oldScript.attributes].forEach(attr => script.setAttribute(attr.name, attr.value));
+      script.textContent = oldScript.textContent;
+      const loaded = script.src
+        ? new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; })
+        : Promise.resolve();
+      oldScript.replaceWith(script);
+      await loaded;
+    }
+    PAGE_SCRIPTS_LOADED[name] = true;
+  }
   if (typeof window['init_' + name] === 'function') window['init_' + name]();
 }
 
@@ -371,7 +388,11 @@ function channelPill(ch) {
   return `<span class="channel-pill ${cls}">${ch}</span>`;
 }
 function statusPill(s) {
-  const cls = s === 'In Stock' || s === 'Fulfilled' ? 'in-stock' : s === 'Low Stock' || s === 'Pending' ? 'low-stock' : 'out';
+  const cls = ['In Stock', 'Fulfilled', 'Received', 'Available'].includes(s)
+    ? 'in-stock'
+    : ['Low Stock', 'Pending', 'Draft', 'In Transit', 'Staged'].includes(s)
+      ? 'low-stock'
+      : 'out';
   return `<span class="status-pill ${cls}">${s}</span>`;
 }
 

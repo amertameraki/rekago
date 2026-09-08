@@ -1,0 +1,534 @@
+<!-- packinglists.html - inbound packing list workflow preview -->
+<main>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px">
+    <div>
+      <div class="page-title" style="margin-bottom:2px">Packing Lists</div>
+      <div class="page-meta" id="plMeta">Supplier inbound shipments</div>
+    </div>
+    <button class="btn-secondary" onclick="plResetSampleData()">Reset sample data</button>
+  </div>
+
+  <div class="pl-metrics">
+    <div class="pl-metric">
+      <span>Open Lists</span>
+      <strong id="plOpenCount">0</strong>
+      <small>not yet received</small>
+    </div>
+    <div class="pl-metric">
+      <span>Inbound Units</span>
+      <strong id="plInboundUnits">0</strong>
+      <small>expected quantity</small>
+    </div>
+    <div class="pl-metric">
+      <span>Received Units</span>
+      <strong id="plReceivedUnits">0</strong>
+      <small>completed quantity</small>
+    </div>
+    <div class="pl-metric live-note">
+      <span>Write Mode</span>
+      <strong id="plWriteMode">Preview</strong>
+      <small>live receive comes next</small>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="pl-section-head">
+      <div>
+        <div class="form-section-title" style="margin:0;border:0;padding:0">New Packing List</div>
+        <div class="pl-sub">Build an inbound shipment from supplier lines, then receive it into stock once it arrives.</div>
+      </div>
+      <span class="status-pill low-stock" id="plModeBadge">Preview Only</span>
+    </div>
+
+    <div class="form-grid form-grid-4">
+      <div class="form-field">
+        <label class="form-label">PL Number</label>
+        <input class="form-input" id="plNumber" placeholder="PL-2026-005">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="plDate" type="date">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Supplier</label>
+        <input class="form-input" id="plSupplier" placeholder="Supplier name">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="plStatus">
+          <option>Draft</option>
+          <option>In Transit</option>
+          <option>Received</option>
+          <option>Cancelled</option>
+        </select>
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="plNotes" placeholder="Optional">
+      </div>
+    </div>
+
+    <div class="pl-lines">
+      <div class="pl-line-form">
+        <div class="form-field">
+          <label class="form-label">Product</label>
+          <select class="form-select" id="plLineSku" onchange="plUpdateLineCost()"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Qty</label>
+          <input class="form-input" id="plLineQty" type="number" min="1" placeholder="1">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Unit Cost (IDR)</label>
+          <input class="form-input" id="plLineCost" type="number" min="0" placeholder="0">
+        </div>
+        <button class="btn-primary pl-add-btn" onclick="plAddLine()">Add Line</button>
+      </div>
+
+      <table class="data-table pl-lines-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Unit Cost</th>
+            <th>Total Cost</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="plLinesBody"></tbody>
+      </table>
+      <div class="pl-totals">
+        <span>Total Qty: <strong id="plLineTotalQty">0</strong></span>
+        <span>Total Cost: <strong id="plLineTotalCost">Rp 0</strong></span>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" onclick="plCreateList()">Create Packing List</button>
+      <button class="btn-secondary" onclick="plClearDraft()">Clear</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <input class="search-input" id="plSearch" placeholder="Search packing lists..." oninput="plRenderLists()">
+    <button class="cat-pill active" onclick="plSetStatusFilter('', this)">All</button>
+    <button class="cat-pill" onclick="plSetStatusFilter('Draft', this)">Draft</button>
+    <button class="cat-pill" onclick="plSetStatusFilter('In Transit', this)">In Transit</button>
+    <button class="cat-pill" onclick="plSetStatusFilter('Received', this)">Received</button>
+  </div>
+
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>PL Number</th>
+          <th>Date</th>
+          <th>Supplier</th>
+          <th>Lines</th>
+          <th>Qty</th>
+          <th>Total Cost</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="plListBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<style>
+.pl-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 20px;
+}
+.pl-metric {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+}
+.pl-metric.live-note { border-left: 3px solid var(--warn); }
+.pl-metric span {
+  color: var(--amber);
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+.pl-metric strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+.pl-metric.live-note strong {
+  font-size: 19px;
+  line-height: 1.25;
+}
+.pl-metric small,
+.pl-sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pl-section-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.pl-lines {
+  background: rgba(242,187,22,0.04);
+  border: 1px solid rgba(191,158,59,0.18);
+  border-radius: var(--radius);
+  margin-top: 18px;
+  padding: 16px;
+}
+.pl-line-form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) 100px 160px auto;
+  margin-bottom: 14px;
+}
+.pl-add-btn {
+  height: 35px;
+  white-space: nowrap;
+}
+.pl-lines-table {
+  background: var(--surface);
+  border: 1px solid rgba(191,158,59,0.12);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.pl-totals {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.pl-totals span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pl-totals strong {
+  color: var(--text);
+  font-size: 14px;
+}
+.btn-icon-remove {
+  background: rgba(192,57,43,0.08);
+  border: 1px solid rgba(192,57,43,0.12);
+  border-radius: 5px;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+.btn-receive {
+  background: rgba(92,138,26,0.08);
+  border: 1px solid rgba(92,138,26,0.15);
+  border-radius: 5px;
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+}
+@media (max-width: 900px) {
+  .pl-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pl-line-form { grid-template-columns: 1fr; }
+  .pl-add-btn { width: 100%; }
+  .pl-totals { align-items: flex-end; flex-direction: column; gap: 4px; }
+}
+@media (max-width: 640px) {
+  .pl-metrics { grid-template-columns: 1fr; }
+}
+</style>
+
+<script>
+const PL_STORAGE_KEY = 'rekago_packing_lists_preview';
+
+const PL_SAMPLE = [
+  {
+    number: 'PL-2026-001',
+    date: '2026-05-20',
+    supplier: 'Supplier Rattan Jakarta',
+    status: 'Received',
+    notes: 'Initial May restock',
+    lines: [
+      { sku: 'BLM-001', productName: 'Rattan Placemat', qty: 40, unitCost: 22000 },
+      { sku: 'BLM-001', productName: 'Rattan Placemat', qty: 20, unitCost: 22000 },
+    ],
+  },
+  {
+    number: 'PL-2026-002',
+    date: '2026-05-26',
+    supplier: 'Supplier Tekstil Bandung',
+    status: 'In Transit',
+    notes: 'Napkin replenishment',
+    lines: [
+      { sku: 'BLM-002', productName: 'Linen Napkin', qty: 35, unitCost: 9000 },
+      { sku: 'BLM-003', productName: 'Rattan + Napkin Set', qty: 12, unitCost: 52000 },
+    ],
+  },
+];
+
+let plLines = [];
+let plLists = [];
+let plStatusFilter = '';
+
+function init_packinglists() {
+  document.getElementById('plDate').value = new Date().toISOString().slice(0, 10);
+  plLists = plLoadLists();
+  plPopulateProducts();
+  plRenderLines();
+  plRenderLists();
+}
+
+function plLoadLists() {
+  const saved = localStorage.getItem(PL_STORAGE_KEY);
+  if (!saved) return PL_SAMPLE.map(plNormalizeList);
+  try {
+    const parsed = JSON.parse(saved);
+    return (Array.isArray(parsed) ? parsed : []).map(plNormalizeList).filter(pl => pl.number);
+  } catch (e) {
+    localStorage.removeItem(PL_STORAGE_KEY);
+    return PL_SAMPLE.map(plNormalizeList);
+  }
+}
+
+function plSaveLists() {
+  localStorage.setItem(PL_STORAGE_KEY, JSON.stringify(plLists));
+}
+
+function plNormalizeList(row) {
+  return {
+    number: String(row.number ?? row.plNumber ?? row['PL Number'] ?? '').trim(),
+    date: String(row.date ?? row.Date ?? '').trim(),
+    supplier: String(row.supplier ?? row['Supplier Name'] ?? row.Supplier ?? '').trim(),
+    status: String(row.status ?? row.Status ?? 'Draft').trim(),
+    notes: String(row.notes ?? row.Notes ?? '').trim(),
+    lines: (row.lines || row.items || []).map(plNormalizeLine).filter(line => line.sku),
+  };
+}
+
+function plNormalizeLine(row) {
+  const qty = plNumber(row.qty ?? row['Qty In'] ?? row.quantity ?? 0);
+  const unitCost = plNumber(row.unitCost ?? row['Unit Cost (IDR)'] ?? row.costIDR ?? 0);
+  return {
+    sku: String(row.sku ?? row.SKU ?? row['SKU ID'] ?? '').trim(),
+    productName: String(row.productName ?? row.name ?? row['Product Name'] ?? row['SKU Name'] ?? '').trim(),
+    qty,
+    unitCost,
+  };
+}
+
+function plPopulateProducts() {
+  const products = plGetProducts();
+  document.getElementById('plLineSku').innerHTML = products.length
+    ? products.map(product => `<option value="${plEscape(product.sku)}">${plEscape(product.sku)} - ${plEscape(product.productName)}</option>`).join('')
+    : '<option value="">No products available</option>';
+  plUpdateLineCost();
+}
+
+function plGetProducts() {
+  if (REKAGO.mode === 'live' && REKAGO.skus.length) return REKAGO.skus.map(plNormalizeProduct).filter(p => p.sku);
+  try {
+    const saved = localStorage.getItem('rekago_inventory_preview_data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const rows = Array.isArray(parsed) ? parsed : parsed?.data || parsed?.products || parsed?.items || [];
+      const products = rows.map(plNormalizeProduct).filter(p => p.sku);
+      if (products.length) return products;
+    }
+  } catch (e) {
+    localStorage.removeItem('rekago_inventory_preview_data');
+  }
+  return [
+    { sku:'BLM-001', productName:'Rattan Placemat', costIDR:22000 },
+    { sku:'BLM-002', productName:'Linen Napkin', costIDR:9000 },
+    { sku:'BLM-003', productName:'Rattan + Napkin Set', costIDR:52000 },
+    { sku:'BLM-004', productName:'Woven Basket', costIDR:78000 },
+  ];
+}
+
+function plNormalizeProduct(row) {
+  return {
+    sku: String(row.sku ?? row.SKU ?? row['SKU ID'] ?? '').trim(),
+    productName: String(row.productName ?? row.name ?? row['Product Name'] ?? row['SKU Name'] ?? '').trim(),
+    costIDR: plNumber(row.costIDR ?? row.costPrice ?? row['Cost Price (IDR)'] ?? row['Unit Cost (IDR)'] ?? 0),
+  };
+}
+
+function plUpdateLineCost() {
+  const product = plSelectedProduct();
+  document.getElementById('plLineCost').value = product ? product.costIDR : '';
+}
+
+function plAddLine() {
+  const product = plSelectedProduct();
+  const qty = plNumber(document.getElementById('plLineQty').value || 1);
+  const unitCost = plNumber(document.getElementById('plLineCost').value);
+  if (!product) { showToast('Select a product first.', true); return; }
+  if (qty < 1) { showToast('Qty must be at least 1.', true); return; }
+
+  plLines.push({
+    sku: product.sku,
+    productName: product.productName,
+    qty,
+    unitCost,
+  });
+  document.getElementById('plLineQty').value = '';
+  plRenderLines();
+}
+
+function plRemoveLine(index) {
+  plLines.splice(index, 1);
+  plRenderLines();
+}
+
+function plRenderLines() {
+  document.getElementById('plLinesBody').innerHTML = plLines.length
+    ? plLines.map((line, index) => `<tr>
+        <td><span class="mono">${plEscape(line.sku)}</span></td>
+        <td>${plEscape(line.productName)}</td>
+        <td>${line.qty.toLocaleString('id-ID')}</td>
+        <td>${formatRp(line.unitCost)}</td>
+        <td>${formatRp(line.qty * line.unitCost)}</td>
+        <td style="text-align:right"><button class="btn-icon-remove" onclick="plRemoveLine(${index})">Remove</button></td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="6">No lines added yet</td></tr>';
+  document.getElementById('plLineTotalQty').textContent = plLines.reduce((sum, line) => sum + line.qty, 0).toLocaleString('id-ID');
+  document.getElementById('plLineTotalCost').textContent = formatRp(plLines.reduce((sum, line) => sum + (line.qty * line.unitCost), 0));
+}
+
+function plCreateList() {
+  const number = document.getElementById('plNumber').value.trim();
+  if (!number) { showToast('PL Number is required.', true); return; }
+  if (!plLines.length) { showToast('Add at least one packing list line.', true); return; }
+  if (plLists.some(pl => pl.number === number)) { showToast('PL Number already exists.', true); return; }
+
+  plLists.unshift({
+    number,
+    date: document.getElementById('plDate').value,
+    supplier: document.getElementById('plSupplier').value.trim(),
+    status: document.getElementById('plStatus').value,
+    notes: document.getElementById('plNotes').value.trim(),
+    lines: plLines.map(line => ({ ...line })),
+  });
+  plSaveLists();
+  plClearDraft();
+  plRenderLists();
+  showToast('Packing List created in preview.');
+}
+
+function plClearDraft() {
+  document.getElementById('plNumber').value = '';
+  document.getElementById('plSupplier').value = '';
+  document.getElementById('plNotes').value = '';
+  document.getElementById('plStatus').value = 'Draft';
+  plLines = [];
+  plRenderLines();
+}
+
+function plResetSampleData() {
+  localStorage.removeItem(PL_STORAGE_KEY);
+  plLines = [];
+  plLists = PL_SAMPLE.map(plNormalizeList);
+  plClearDraft();
+  plRenderLists();
+  showToast('Sample packing lists restored.');
+}
+
+function plRenderLists() {
+  const q = document.getElementById('plSearch').value.trim().toLowerCase();
+  const filtered = plLists.filter(pl =>
+    (!plStatusFilter || pl.status === plStatusFilter)
+    && (!q || [pl.number, pl.supplier, pl.status].join(' ').toLowerCase().includes(q))
+  );
+  document.getElementById('plListBody').innerHTML = filtered.length
+    ? filtered.map(pl => {
+        const totalQty = pl.lines.reduce((sum, line) => sum + line.qty, 0);
+        const totalCost = pl.lines.reduce((sum, line) => sum + (line.qty * line.unitCost), 0);
+        const receiveButton = pl.status === 'Received' || pl.status === 'Cancelled'
+          ? ''
+          : `<button class="btn-receive" onclick="plReceive('${plEscapeAttr(pl.number)}')">Receive</button>`;
+        return `<tr>
+          <td><span class="mono">${plEscape(pl.number)}</span></td>
+          <td>${plEscape(pl.date)}</td>
+          <td>${plEscape(pl.supplier || '-')}</td>
+          <td>${pl.lines.length}</td>
+          <td>${totalQty.toLocaleString('id-ID')}</td>
+          <td>${formatRp(totalCost)}</td>
+          <td>${statusPill(pl.status)}</td>
+          <td style="text-align:right">${receiveButton}</td>
+        </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="8">No packing lists found</td></tr>';
+  plRenderMetrics();
+}
+
+function plRenderMetrics() {
+  const open = plLists.filter(pl => pl.status !== 'Received' && pl.status !== 'Cancelled').length;
+  const inbound = plLists.filter(pl => pl.status !== 'Received' && pl.status !== 'Cancelled')
+    .reduce((sum, pl) => sum + pl.lines.reduce((lineSum, line) => lineSum + line.qty, 0), 0);
+  const received = plLists.filter(pl => pl.status === 'Received')
+    .reduce((sum, pl) => sum + pl.lines.reduce((lineSum, line) => lineSum + line.qty, 0), 0);
+  document.getElementById('plOpenCount').textContent = open;
+  document.getElementById('plInboundUnits').textContent = inbound.toLocaleString('id-ID');
+  document.getElementById('plReceivedUnits').textContent = received.toLocaleString('id-ID');
+  document.getElementById('plWriteMode').textContent = REKAGO.mode === 'live' ? 'Staged' : 'Preview';
+  document.getElementById('plMeta').textContent = `${plLists.length} packing lists tracked`;
+}
+
+function plReceive(number) {
+  if (REKAGO.mode === 'live') {
+    showToast('Live receiving needs the Apps Script packing list endpoint next.', true);
+    return;
+  }
+  const list = plLists.find(pl => pl.number === number);
+  if (!list) return;
+  list.status = 'Received';
+  plSaveLists();
+  plRenderLists();
+  showToast(`${number} marked as received.`);
+}
+
+function plSetStatusFilter(status, btn) {
+  plStatusFilter = status;
+  document.querySelectorAll('#page-frame .cat-pill').forEach(item => item.classList.remove('active'));
+  btn.classList.add('active');
+  plRenderLists();
+}
+
+function plSelectedProduct() {
+  const sku = document.getElementById('plLineSku').value;
+  return plGetProducts().find(product => product.sku === sku);
+}
+
+function plNumber(value) {
+  const number = Number(String(value ?? 0).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(number) ? number : 0;
+}
+
+function plEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
+}
+
+function plEscapeAttr(value) {
+  return plEscape(value).replace(/`/g, '&#96;');
+}
+</script>

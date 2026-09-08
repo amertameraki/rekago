@@ -47,6 +47,51 @@
         <input class="form-input" id="nsoNotes" placeholder="Optional">
       </div>
     </div>
+
+    <div class="order-builder">
+      <div class="order-builder-head">
+        <div>
+          <div class="form-section-title" style="margin:0;border:0;padding:0">Order Lines</div>
+          <div class="order-builder-sub">Add products, check available stock, and let ReKaGo calculate totals.</div>
+        </div>
+        <span class="status-pill in-stock" id="orderStockBadge">Ready</span>
+      </div>
+      <div class="order-line-form">
+        <div class="form-field">
+          <label class="form-label">Product</label>
+          <select class="form-select" id="orderLineSku" onchange="updateOrderLinePrice()"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Qty</label>
+          <input class="form-input" id="orderLineQty" type="number" min="1" placeholder="1" oninput="previewOrderLine()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Unit Price (IDR)</label>
+          <input class="form-input" id="orderLinePrice" type="number" min="0" placeholder="0" oninput="previewOrderLine()">
+        </div>
+        <button class="btn-primary order-add-btn" onclick="addOrderLine()">Add Line</button>
+      </div>
+      <div class="order-line-note" id="orderLineNote">Choose a product to see available stock.</div>
+      <table class="data-table order-lines-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Product</th>
+            <th>Available</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Line Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="orderLinesBody"></tbody>
+      </table>
+      <div class="order-totals">
+        <span>Total Qty: <strong id="orderLineTotalQty">0</strong></span>
+        <span>Total Revenue: <strong id="orderLineTotalRevenue">Rp 0</strong></span>
+      </div>
+    </div>
+
     <div class="form-actions">
       <button class="btn-primary" onclick="submitNewOrder()">Create Order</button>
     </div>
@@ -80,6 +125,80 @@
   </div>
 </main>
 
+<style>
+.order-builder {
+  background: rgba(242,187,22,0.04);
+  border: 1px solid rgba(191,158,59,0.18);
+  border-radius: var(--radius);
+  margin-top: 18px;
+  padding: 16px;
+}
+.order-builder-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.order-builder-sub {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+.order-line-form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) 100px 160px auto;
+}
+.order-add-btn {
+  height: 35px;
+  white-space: nowrap;
+}
+.order-line-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0 12px;
+}
+.order-line-note.warn { color: var(--warn); }
+.order-line-note.danger { color: var(--danger); }
+.order-lines-table {
+  background: var(--surface);
+  border: 1px solid rgba(191,158,59,0.12);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.btn-icon-remove {
+  background: rgba(192,57,43,0.08);
+  border: 1px solid rgba(192,57,43,0.12);
+  border-radius: 5px;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+.order-totals {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.order-totals span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.order-totals strong {
+  color: var(--text);
+  font-size: 14px;
+}
+@media (max-width: 840px) {
+  .order-line-form { grid-template-columns: 1fr; }
+  .order-add-btn { width: 100%; }
+  .order-totals { align-items: flex-end; flex-direction: column; gap: 4px; }
+}
+</style>
+
 <script>
 const ORDERS_MOCK = [
   { 'SO Number':'SO-2026-001',Date:'2026-05-23',Channel:'TikTok Shop','Customer Ref':'TTK-0482','Total Qty':6, 'Total Revenue (IDR)':510000,Status:'Fulfilled' },
@@ -88,10 +207,20 @@ const ORDERS_MOCK = [
   { 'SO Number':'SO-2026-004',Date:'2026-05-22',Channel:'Direct',     'Customer Ref':'WA-ORDER','Total Qty':4, 'Total Revenue (IDR)':480000,Status:'Fulfilled' },
 ];
 
+const ORDER_PRODUCTS_MOCK = [
+  { sku:'BLM-001', productName:'Rattan Placemat',       availableStock:84, priceIDR:85000,  reorderThreshold:20 },
+  { sku:'BLM-002', productName:'Linen Napkin',           availableStock:56, priceIDR:45000,  reorderThreshold:15 },
+  { sku:'BLM-003', productName:'Rattan + Napkin Set',    availableStock:8,  priceIDR:120000, reorderThreshold:10 },
+  { sku:'BLM-004', productName:'Woven Basket',           availableStock:0,  priceIDR:160000, reorderThreshold:6 },
+];
+
 let orderChannelFilter = '';
+let orderLines = [];
 
 function init_salesorders() {
   document.getElementById('nsoDate').value = new Date().toISOString().slice(0, 10);
+  populateOrderProducts();
+  renderOrderLines();
   renderOrders();
 }
 
@@ -124,6 +253,158 @@ function filterOrderChannel(btn, ch) {
   renderOrders();
 }
 
+function populateOrderProducts() {
+  const products = getOrderProducts();
+  document.getElementById('orderLineSku').innerHTML = products.length
+    ? products.map(product => `<option value="${escapeOrderHtml(product.sku)}">${escapeOrderHtml(product.sku)} - ${escapeOrderHtml(product.productName)}</option>`).join('')
+    : '<option value="">No products available</option>';
+  updateOrderLinePrice();
+}
+
+function getOrderProducts() {
+  if (REKAGO.mode === 'live' && REKAGO.skus.length) return REKAGO.skus.map(normalizeOrderProduct).filter(p => p.sku);
+
+  try {
+    const saved = localStorage.getItem('rekago_inventory_preview_data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const rows = Array.isArray(parsed) ? parsed : parsed?.data || parsed?.products || parsed?.items || [];
+      const products = rows.map(normalizeOrderProduct).filter(p => p.sku);
+      if (products.length) return products;
+    }
+  } catch (e) {
+    localStorage.removeItem('rekago_inventory_preview_data');
+  }
+
+  return ORDER_PRODUCTS_MOCK.map(normalizeOrderProduct);
+}
+
+function normalizeOrderProduct(row) {
+  const availableStock = orderNumber(row.availableStock ?? row['Available Stock'] ?? row.currentStock ?? row['Current Stock'] ?? 0);
+  const priceIDR = orderNumber(row.finalPrice ?? row.srp ?? row.priceIDR ?? row['Unit Price (IDR)'] ?? row['Price IDR'] ?? 0);
+  return {
+    sku: String(row.sku ?? row.SKU ?? row['SKU ID'] ?? '').trim(),
+    productName: String(row.productName ?? row.name ?? row['Product Name'] ?? row['SKU Name'] ?? '').trim(),
+    availableStock,
+    priceIDR,
+    reorderThreshold: orderNumber(row.reorderThreshold ?? row['Reorder Threshold'] ?? 0),
+  };
+}
+
+function updateOrderLinePrice() {
+  const product = getSelectedOrderProduct();
+  document.getElementById('orderLinePrice').value = product ? product.priceIDR : '';
+  previewOrderLine();
+}
+
+function previewOrderLine() {
+  const product = getSelectedOrderProduct();
+  const qty = orderNumber(document.getElementById('orderLineQty').value || 1);
+  const note = document.getElementById('orderLineNote');
+  const badge = document.getElementById('orderStockBadge');
+
+  if (!product) {
+    note.textContent = 'No product selected.';
+    note.className = 'order-line-note danger';
+    badge.outerHTML = '<span class="status-pill out" id="orderStockBadge">No Product</span>';
+    return;
+  }
+
+  if (product.availableStock <= 0) {
+    note.textContent = `${product.productName} is out of stock.`;
+    note.className = 'order-line-note danger';
+    badge.outerHTML = '<span class="status-pill out" id="orderStockBadge">Out of Stock</span>';
+  } else if (qty > product.availableStock) {
+    note.textContent = `Only ${product.availableStock} available for ${product.productName}.`;
+    note.className = 'order-line-note danger';
+    badge.outerHTML = '<span class="status-pill out" id="orderStockBadge">Over Stock</span>';
+  } else if (product.reorderThreshold && product.availableStock <= product.reorderThreshold) {
+    note.textContent = `${product.productName}: ${product.availableStock} available. This SKU is already low.`;
+    note.className = 'order-line-note warn';
+    badge.outerHTML = '<span class="status-pill low-stock" id="orderStockBadge">Low Stock</span>';
+  } else {
+    note.textContent = `${product.productName}: ${product.availableStock} available.`;
+    note.className = 'order-line-note';
+    badge.outerHTML = '<span class="status-pill in-stock" id="orderStockBadge">Available</span>';
+  }
+}
+
+function addOrderLine() {
+  const product = getSelectedOrderProduct();
+  const qty = orderNumber(document.getElementById('orderLineQty').value || 1);
+  const unitPrice = orderNumber(document.getElementById('orderLinePrice').value);
+  if (!product) { showToast('Select a product first.', true); return; }
+  if (qty < 1) { showToast('Qty must be at least 1.', true); return; }
+  if (qty > product.availableStock) { showToast(`Only ${product.availableStock} available for ${product.sku}.`, true); return; }
+
+  const existing = orderLines.find(line => line.sku === product.sku && line.unitPrice === unitPrice);
+  if (existing && existing.qty + qty > product.availableStock) {
+    showToast(`Only ${product.availableStock} available for ${product.sku}.`, true);
+    return;
+  }
+  if (existing) existing.qty += qty;
+  else orderLines.push({
+    sku: product.sku,
+    productName: product.productName,
+    availableStock: product.availableStock,
+    qty,
+    unitPrice,
+  });
+
+  document.getElementById('orderLineQty').value = '';
+  renderOrderLines();
+  previewOrderLine();
+}
+
+function removeOrderLine(index) {
+  orderLines.splice(index, 1);
+  renderOrderLines();
+  previewOrderLine();
+}
+
+function renderOrderLines() {
+  document.getElementById('orderLinesBody').innerHTML = orderLines.length
+    ? orderLines.map((line, index) => `<tr>
+        <td><span class="mono">${escapeOrderHtml(line.sku)}</span></td>
+        <td>${escapeOrderHtml(line.productName)}</td>
+        <td>${line.availableStock.toLocaleString('id-ID')}</td>
+        <td>${line.qty.toLocaleString('id-ID')}</td>
+        <td>${formatRp(line.unitPrice)}</td>
+        <td>${formatRp(line.qty * line.unitPrice)}</td>
+        <td style="text-align:right"><button class="btn-icon-remove" onclick="removeOrderLine(${index})">Remove</button></td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="7">No lines added yet</td></tr>';
+
+  const totalQty = orderLines.reduce((sum, line) => sum + line.qty, 0);
+  const totalRevenue = orderLines.reduce((sum, line) => sum + (line.qty * line.unitPrice), 0);
+  document.getElementById('orderLineTotalQty').textContent = totalQty.toLocaleString('id-ID');
+  document.getElementById('orderLineTotalRevenue').textContent = formatRp(totalRevenue);
+  if (orderLines.length) {
+    document.getElementById('nsoQty').value = totalQty;
+    document.getElementById('nsoRevenue').value = totalRevenue;
+  }
+}
+
+function getSelectedOrderProduct() {
+  const sku = document.getElementById('orderLineSku').value;
+  return getOrderProducts().find(product => product.sku === sku);
+}
+
+function orderNumber(value) {
+  const number = Number(String(value ?? 0).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(number) ? number : 0;
+}
+
+function escapeOrderHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
+}
+
 async function submitNewOrder() {
   if (!requireLive()) return;
   const payload = {
@@ -135,6 +416,13 @@ async function submitNewOrder() {
     totalRevenue: document.getElementById('nsoRevenue').value,
     status:       document.getElementById('nsoStatus').value,
     notes:        document.getElementById('nsoNotes').value,
+    lines:         orderLines.map(line => ({
+      sku: line.sku,
+      productName: line.productName,
+      qty: line.qty,
+      unitPrice: line.unitPrice,
+      lineTotal: line.qty * line.unitPrice,
+    })),
   };
   if (!payload.soNumber) { showToast('SO Number is required.', true); return; }
   const res = await apiPost('createSO', payload);
