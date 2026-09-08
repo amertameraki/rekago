@@ -3,7 +3,7 @@
   <div class="page-title">Products</div>
 
   <!-- Add Product form -->
-  <div class="form-section">
+  <div class="form-section" id="addProductSection">
     <div class="form-section-title">Add Product</div>
     <div class="form-grid">
       <div class="form-field">
@@ -50,7 +50,7 @@
       </div>
     </div>
     <div class="form-actions">
-      <button class="btn-primary" onclick="submitAddProduct()">Add Product</button>
+      <button class="btn-primary" id="addProductButton" onclick="submitAddProduct()">Add Product</button>
     </div>
   </div>
 
@@ -93,6 +93,7 @@ const PRODUCTS_MOCK = [
 let prodCatFilter = '';
 
 function init_products() {
+  lockDemoWriteForm('addProductSection', 'addProductButton');
   renderProducts();
 }
 

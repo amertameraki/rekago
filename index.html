@@ -254,6 +254,9 @@ const SHARED_CSS = `<style>
   .demo-gate-right { display: flex; align-items: center; gap: 8px; }
   .demo-gate-input { border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; background: var(--surface); color: var(--text); width: 200px; outline: none; }
   .btn-unlock { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 6px; cursor: pointer; }
+  .demo-readonly-note { background: rgba(242,187,22,0.07); border: 1px solid rgba(242,187,22,0.25); border-radius: 6px; padding: 9px 12px; color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+  .demo-readonly-note strong { color: var(--text); }
+  button:disabled { cursor: not-allowed; opacity: 0.55; }
 </style>`;
 
 // ============================================================
@@ -379,8 +382,20 @@ function showToast(msg, isError) {
 // HELPERS
 // ============================================================
 function requireLive() {
-  if (REKAGO.mode !== 'live') { showToast('Connect to live mode first.', true); return false; }
+  if (REKAGO.mode !== 'live') { showToast('Demo mode is read-only. Connect with a registered email to edit.', true); return false; }
   return true;
+}
+function lockDemoWriteForm(sectionId, buttonId) {
+  if (REKAGO.mode === 'live') return;
+  const section = document.getElementById(sectionId);
+  const button = document.getElementById(buttonId);
+  if (!section || !button || section.querySelector('.demo-readonly-note')) return;
+  const note = document.createElement('div');
+  note.className = 'demo-readonly-note';
+  note.innerHTML = '<strong>Demo mode:</strong> this form is read-only. Connect with a registered email to make changes.';
+  section.insertBefore(note, section.firstElementChild);
+  button.disabled = true;
+  button.textContent = 'Registered access required';
 }
 function formatRp(val) { return 'Rp ' + Number(val).toLocaleString('id-ID'); }
 function channelPill(ch) {

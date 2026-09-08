@@ -2,7 +2,7 @@
 <main>
   <div class="page-title">Stock In</div>
 
-  <div class="form-section">
+  <div class="form-section" id="stockInSection">
     <div class="form-section-title">Record Stock In</div>
     <div class="form-grid form-grid-4">
       <div class="form-field">
@@ -47,7 +47,7 @@
       </div>
     </div>
     <div class="form-actions">
-      <button class="btn-primary" onclick="submitStockIn()">Record Stock In</button>
+      <button class="btn-primary" id="recordStockInButton" onclick="submitStockIn()">Record Stock In</button>
     </div>
   </div>
 
@@ -87,6 +87,7 @@ const ITEMS_MOCK_SI = [
 ];
 
 function init_stockin() {
+  lockDemoWriteForm('stockInSection', 'recordStockInButton');
   document.getElementById('siDate').value = new Date().toISOString().slice(0, 10);
   populateSiSkus();
   renderStockInTable();
