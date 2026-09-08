@@ -41,9 +41,12 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 .nav-tab { background: none; border: none; color: rgba(242,187,22,0.55); font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
 .nav-tab:hover { color: var(--gold); background: rgba(242,187,22,0.07); }
 .nav-tab.active { color: var(--nav); background: var(--gold); font-weight: 600; }
-.nav-right { display: flex; align-items: center; gap: 10px; min-width: 220px; justify-content: flex-end; }
+.nav-right { display: flex; align-items: center; gap: 10px; min-width: 220px; justify-content: flex-end; position: relative; }
 .lang-btn { background: none; border: none; color: rgba(242,187,22,0.5); font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 4px; transition: color 0.15s; }
 .lang-btn:hover, .lang-btn.active { color: var(--gold); }
+.language-note { position: absolute; top: 48px; right: 110px; width: 220px; padding: 10px 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(64,57,25,0.16); font-size: 11px; line-height: 1.45; opacity: 0; transform: translateY(-5px); pointer-events: none; transition: all 0.2s ease; z-index: 20; }
+.language-note.show { opacity: 1; transform: translateY(0); }
+.language-note::before { content: ''; position: absolute; top: -6px; right: 82px; width: 10px; height: 10px; background: var(--surface); border-left: 1px solid var(--border); border-top: 1px solid var(--border); transform: rotate(45deg); }
 .demo-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: var(--warn); background: rgba(166,96,10,0.12); padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
 .btn-trylive { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 6px; transition: opacity 0.15s; }
 .btn-trylive:hover { opacity: 0.88; }
@@ -157,6 +160,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="lang-btn active" onclick="setLang('en')">EN</button>
       <button class="lang-btn" onclick="setLang('id')">ID</button>
       <button class="lang-btn" onclick="setLang('ko')">한국어</button>
+      <div class="language-note" id="languageNote" role="status"></div>
       <span class="demo-badge" id="modeBadge">DEMO</span>
       <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Live</button>
       <div class="live-indicator" id="liveIndicator" style="display:none">
@@ -301,10 +305,26 @@ async function loadPage(name) {
 // LANGUAGE
 // ============================================================
 function setLang(lang) {
+  if (lang !== 'en') {
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.lang-btn[onclick="setLang(\'en\')"]').classList.add('active');
+    REKAGO.lang = 'en';
+    showLanguageNote(lang);
+    return;
+  }
   REKAGO.lang = lang;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
   if (typeof window.onLangChange === 'function') window.onLangChange(lang);
+}
+function showLanguageNote(lang) {
+  const note = document.getElementById('languageNote');
+  if (!note) return;
+  const label = lang === 'id' ? 'Indonesian' : 'Korean';
+  note.textContent = `${label} language support is coming soon. English remains active for now.`;
+  note.classList.add('show');
+  clearTimeout(window.languageNoteTimer);
+  window.languageNoteTimer = setTimeout(() => note.classList.remove('show'), 3600);
 }
 
 // ============================================================
