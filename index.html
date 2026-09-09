@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rekago — Inventory, rekapped</title>
 <script src="config.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -176,15 +177,11 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
   <div class="modal">
     <div class="modal-brand">Rekago</div>
     <div class="modal-title">Connect to your inventory</div>
-    <div class="modal-sub">Enter your email to access live data from your Google Sheet. Your sheet stays private — Rekago never stores your data.</div>
-    <div>
-      <label class="modal-label">Your Email</label>
-      <input class="modal-input" id="modalEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter') submitLogin()">
-      <div class="modal-error" id="modalError"></div>
-    </div>
+    <div class="modal-sub">Sign in with the Google account that's been added as an authorized user. Your sheet stays private — Rekago never stores your data.</div>
+    <div id="gSignInBtn" style="display:flex;justify-content:center;min-height:40px;margin:4px 0 2px"></div>
+    <div class="modal-error" id="modalError"></div>
     <div class="modal-actions">
-      <button class="btn-modal-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-modal-primary" id="btnLogin" onclick="submitLogin()">Connect</button>
+      <button class="btn-modal-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
     </div>
     <div class="modal-note">Don't have access yet? Contact the sheet owner to be added as an authorized user.</div>
   </div>
@@ -197,7 +194,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 // GLOBAL STATE
 // ============================================================
 const REKAGO = {
-  mode: 'demo', email: null, lang: 'en',
+  mode: 'demo', email: null, idToken: null, lang: 'en',
   skus: [], items: [], stockIn: [], stockOut: [], salesOrders: [],
 };
 
@@ -328,43 +325,70 @@ function showLanguageNote(lang) {
 }
 
 // ============================================================
-// MODAL
+// MODAL / GOOGLE SIGN-IN
 // ============================================================
+let gsiInitialized = false;
+
 function openModal() {
+  const errEl = document.getElementById('modalError');
+  errEl.textContent = '';
   document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('modalEmail').focus();
-  document.getElementById('modalError').textContent = '';
+  initGoogleSignIn();
 }
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
 }
-async function submitLogin() {
-  const email = document.getElementById('modalEmail').value.trim();
+
+function initGoogleSignIn() {
   const errEl = document.getElementById('modalError');
-  errEl.textContent = '';
-  if (!email || !email.includes('@')) { errEl.textContent = 'Enter a valid email address.'; return; }
   if (!window.REKAGO_CONFIG?.gsUrl || REKAGO_CONFIG.gsUrl.includes('YOUR_APPS')) {
     errEl.textContent = 'Backend not configured. Add your Apps Script URL to config.js.'; return;
   }
-  const btn = document.getElementById('btnLogin');
-  btn.textContent = 'Connecting...'; btn.disabled = true;
+  if (!window.REKAGO_CONFIG?.googleClientId || REKAGO_CONFIG.googleClientId.includes('YOUR_CLIENT_ID')) {
+    errEl.textContent = 'Sign-in not configured. Add your Google Client ID to config.js.'; return;
+  }
+  if (!window.google?.accounts?.id) {
+    errEl.textContent = 'Sign-in is still loading — try again in a moment.'; return;
+  }
+  if (!gsiInitialized) {
+    google.accounts.id.initialize({
+      client_id: REKAGO_CONFIG.googleClientId,
+      callback: handleCredentialResponse,
+    });
+    gsiInitialized = true;
+  }
+  document.getElementById('gSignInBtn').innerHTML = '';
+  google.accounts.id.renderButton(document.getElementById('gSignInBtn'), {
+    theme: 'outline', size: 'large', width: 260,
+  });
+}
+
+async function handleCredentialResponse(response) {
+  const errEl = document.getElementById('modalError');
+  errEl.textContent = 'Connecting...';
   try {
-    const res  = await fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action: 'login', email }) });
+    const res  = await fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action: 'login', idToken: response.credential }) });
     const data = await res.json();
     if (data.ok) {
-      REKAGO.mode = 'live'; REKAGO.email = email;
+      REKAGO.mode = 'live'; REKAGO.idToken = response.credential; REKAGO.email = data.email || null;
       closeModal(); setLiveMode(); await loadAllData();
       const activeTab = document.querySelector('.nav-tab.active');
       if (activeTab) { const n = activeTab.textContent.toLowerCase().replace(/\s/g,''); PAGE_CACHE[n] = null; activeTab.click(); }
       showToast('Connected — live data loaded.');
     } else { errEl.textContent = data.error || 'Access denied.'; }
   } catch (e) { errEl.textContent = 'Connection failed. Check your config.js URL.'; }
-  finally { btn.textContent = 'Connect'; btn.disabled = false; }
 }
+
 function setLiveMode() {
   document.getElementById('modeBadge').style.display     = 'none';
   document.getElementById('btnTryLive').style.display    = 'none';
   document.getElementById('liveIndicator').style.display = 'flex';
+}
+function setDemoMode() {
+  REKAGO.mode = 'demo'; REKAGO.idToken = null; REKAGO.email = null;
+  document.getElementById('modeBadge').style.display     = '';
+  document.getElementById('btnTryLive').style.display     = '';
+  document.getElementById('liveIndicator').style.display  = 'none';
 }
 
 // ============================================================
@@ -374,7 +398,12 @@ async function apiGet(action) {
   return fetch(REKAGO_CONFIG.gsUrl + '?action=' + action).then(r => r.json());
 }
 async function apiPost(action, payload) {
-  return fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action, email: REKAGO.email, ...payload }) }).then(r => r.json());
+  const data = await fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action, idToken: REKAGO.idToken, ...payload }) }).then(r => r.json());
+  if (!data.ok && (data.code === 401 || data.code === 403) && REKAGO.mode === 'live') {
+    setDemoMode();
+    showToast('Session expired — please sign in again.', true);
+  }
+  return data;
 }
 async function loadAllData() {
   const [skus, items, si, so, orders] = await Promise.all([
