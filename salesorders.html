@@ -235,11 +235,11 @@ function renderOrders() {
 
   document.getElementById('ordersBody').innerHTML = filtered.length
     ? filtered.map(o => `<tr>
-        <td><span class="mono">${o['SO Number']}</span></td>
-        <td>${o['Date']}</td>
+        <td><span class="mono">${escapeHtml(o['SO Number'])}</span></td>
+        <td>${escapeHtml(o['Date'])}</td>
         <td>${channelPill(o['Channel'])}</td>
-        <td>${o['Customer Ref'] || ''}</td>
-        <td>${o['Total Qty']}</td>
+        <td>${escapeHtml(o['Customer Ref'] || '')}</td>
+        <td>${escapeHtml(o['Total Qty'])}</td>
         <td>${formatRp(o['Total Revenue (IDR)'])}</td>
         <td>${statusPill(o['Status'])}</td>
       </tr>`).join('')

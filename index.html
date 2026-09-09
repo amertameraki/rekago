@@ -452,9 +452,19 @@ function lockDemoWriteForm(sectionId, buttonId) {
   button.textContent = 'Registered access required';
 }
 function formatRp(val) { return 'Rp ' + Number(val).toLocaleString('id-ID'); }
+// Escapes a value before it's interpolated into an .innerHTML template.
+// Every field below ultimately comes from the backing Google Sheet, which
+// any authorized user (or, before the Sign-In fix, anyone spoofing an
+// email) can write via addProduct/addStockIn/addStockOut/createSO — so it
+// must never be trusted as safe HTML.
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
 function channelPill(ch) {
   const cls = ch === 'Tokopedia' ? 'ch-tokopedia' : ch === 'Shopee' ? 'ch-shopee' : ch === 'TikTok Shop' ? 'ch-tiktok' : 'ch-direct';
-  return `<span class="channel-pill ${cls}">${ch}</span>`;
+  return `<span class="channel-pill ${cls}">${escapeHtml(ch)}</span>`;
 }
 function statusPill(s) {
   const cls = ['In Stock', 'Fulfilled', 'Received', 'Available'].includes(s)
@@ -462,7 +472,7 @@ function statusPill(s) {
     : ['Low Stock', 'Pending', 'Draft', 'In Transit', 'Staged'].includes(s)
       ? 'low-stock'
       : 'out';
-  return `<span class="status-pill ${cls}">${s}</span>`;
+  return `<span class="status-pill ${cls}">${escapeHtml(s)}</span>`;
 }
 
 // ============================================================

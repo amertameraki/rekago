@@ -110,12 +110,12 @@ function renderProducts() {
     ? filtered.map(s => {
         const pills = (s['Channels'] || '').split(',').map(c => channelPill(c.trim())).join('');
         return `<tr>
-          <td><span class="mono">${s['SKU ID']}</span></td>
-          <td style="font-weight:500">${s['SKU Name']}</td>
-          <td>${s['Category']}</td>
+          <td><span class="mono">${escapeHtml(s['SKU ID'])}</span></td>
+          <td style="font-weight:500">${escapeHtml(s['SKU Name'])}</td>
+          <td>${escapeHtml(s['Category'])}</td>
           <td>${pills}</td>
           <td>${formatRp(s['Unit Price (IDR)'])}</td>
-          <td>${s['Current Stock']}</td>
+          <td>${escapeHtml(s['Current Stock'])}</td>
           <td>${statusPill(s['SKU Status'])}</td>
         </tr>`;
       }).join('')

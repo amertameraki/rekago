@@ -100,7 +100,7 @@ function populateSiSkus() {
     { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set' },
   ];
   document.getElementById('siSkuId').innerHTML =
-    skus.map(s => `<option value="${s['SKU ID']}">${s['SKU ID']} — ${s['SKU Name']}</option>`).join('');
+    skus.map(s => `<option value="${escapeHtml(s['SKU ID'])}">${escapeHtml(s['SKU ID'])} — ${escapeHtml(s['SKU Name'])}</option>`).join('');
   populateSiItems();
 }
 
@@ -109,7 +109,7 @@ function populateSiItems() {
   const items = REKAGO.mode === 'live' ? REKAGO.items : ITEMS_MOCK_SI;
   document.getElementById('siItemId').innerHTML =
     items.filter(i => i['SKU ID'] === skuId)
-         .map(i => `<option value="${i['Item ID']}">${i['Item ID']} — ${i['Item Name']}</option>`)
+         .map(i => `<option value="${escapeHtml(i['Item ID'])}">${escapeHtml(i['Item ID'])} — ${escapeHtml(i['Item Name'])}</option>`)
          .join('');
 }
 
@@ -117,15 +117,15 @@ function renderStockInTable() {
   const rows = REKAGO.mode === 'live' ? REKAGO.stockIn : SI_MOCK;
   document.getElementById('stockInBody').innerHTML = rows.length
     ? rows.map(r => `<tr>
-        <td>${r.Date}</td>
-        <td><span class="mono">${r['Reference ID']}</span></td>
-        <td><span class="mono">${r['SKU ID']}</span></td>
-        <td>${r['Item ID']}</td>
-        <td>${r['Supplier Name']}</td>
-        <td>${r['Qty In']}</td>
+        <td>${escapeHtml(r.Date)}</td>
+        <td><span class="mono">${escapeHtml(r['Reference ID'])}</span></td>
+        <td><span class="mono">${escapeHtml(r['SKU ID'])}</span></td>
+        <td>${escapeHtml(r['Item ID'])}</td>
+        <td>${escapeHtml(r['Supplier Name'])}</td>
+        <td>${escapeHtml(r['Qty In'])}</td>
         <td>${formatRp(r['Unit Cost (IDR)'])}</td>
         <td>${formatRp(r['Total Cost (IDR)'])}</td>
-        <td>${r['Type']}</td>
+        <td>${escapeHtml(r['Type'])}</td>
       </tr>`).join('')
     : '<tr class="empty-row"><td colspan="9">No records yet</td></tr>';
 }

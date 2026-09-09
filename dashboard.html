@@ -177,8 +177,8 @@ function init_dashboard() {
     const pClass = isOut ? 'out' : isLow ? 'low-stock' : 'in-stock';
     const pText  = isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock';
     return `<tr>
-      <td style="padding-left:18px"><span class="mono">${s.id}</span></td>
-      <td style="font-weight:500">${s.name}</td>
+      <td style="padding-left:18px"><span class="mono">${escapeHtml(s.id)}</span></td>
+      <td style="font-weight:500">${escapeHtml(s.name)}</td>
       <td>
         <div class="stock-bar-wrap">
           <div class="stock-bar-bg"><div class="stock-bar-fill ${isLow ? 'low' : ''}" style="width:${pct}%"></div></div>
