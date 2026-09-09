@@ -411,8 +411,11 @@ async function apiPost(action, payload) {
   return data;
 }
 async function loadAllData() {
+  // getProducts goes through apiPost (verified sign-in), not apiGet, so we
+  // get the full product data including Cost Price — the public doGet
+  // version deliberately strips that before it ever reaches this call.
   const [skus, items, si, so, orders] = await Promise.all([
-    apiGet('getProducts'), apiGet('getItems'),
+    apiPost('getProducts'), apiGet('getItems'),
     apiPost('getStockIn'), apiPost('getStockOut'), apiPost('getSalesOrders'),
   ]);
   if (skus.ok)   REKAGO.skus        = skus.data;
