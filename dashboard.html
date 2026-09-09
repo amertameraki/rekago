@@ -158,8 +158,8 @@ function init_dashboard() {
   document.getElementById('mSold').textContent  = soldQty;
   document.getElementById('lowBadge').textContent = lowCount + ' low';
 
-  // Demo gate
-  if (REKAGO.mode === 'demo') {
+  // Demo gate — only worth showing once Try Live is actually enabled
+  if (REKAGO.mode === 'demo' && typeof TRY_LIVE_ENABLED !== 'undefined' && TRY_LIVE_ENABLED) {
     document.getElementById('demoGate').style.display = 'flex';
   }
 

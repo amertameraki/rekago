@@ -198,6 +198,11 @@ const REKAGO = {
   skus: [], items: [], stockIn: [], stockOut: [], salesOrders: [],
 };
 
+// Flip to true once AuthorizedUsers has real people in it and you're ready
+// to let visitors attempt Google sign-in. Until then, Try Live and the
+// dashboard's demo-gate banner stay hidden — everyone sees demo mode only.
+const TRY_LIVE_ENABLED = false;
+
 // ============================================================
 // SHARED CSS
 // ============================================================
@@ -524,8 +529,8 @@ const TOUR_STEPS = [
   },
   {
     title:  'Try Live',
-    body:   'Enter your email to connect your own Google Sheet. Your data stays private — Rekago never stores it.',
-    target: () => document.getElementById('btnTryLive'),
+    body:   'Sign in with Google to connect your own Google Sheet. Your data stays private — Rekago never stores it.',
+    target: () => TRY_LIVE_ENABLED ? document.getElementById('btnTryLive') : null,
     pos:    'below-left',
   },
 ];
@@ -628,6 +633,7 @@ function skipTour() {
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
   document.head.insertAdjacentHTML('beforeend', SHARED_CSS);
+  if (!TRY_LIVE_ENABLED) document.getElementById('btnTryLive').style.display = 'none';
   runSplash();
 });
 </script>
