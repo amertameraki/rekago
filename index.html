@@ -175,27 +175,34 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="lang-btn" onclick="setLang('ko')">한국어</button>
       <div class="language-note" id="languageNote" role="status"></div>
       <span class="demo-badge" id="modeBadge">DEMO</span>
-      <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Live</button>
+      <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Demo</button>
       <div class="live-indicator" id="liveIndicator" style="display:none">
-        <span class="live-dot"></span><span>Live</span>
+        <span class="live-dot"></span><span id="liveIndicatorLabel">Live</span>
       </div>
     </div>
   </nav>
   <div id="page-frame"></div>
 </div>
 
-<!-- TRY LIVE MODAL -->
+<!-- TRY DEMO MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-brand">Rekago</div>
-    <div class="modal-title">Connect to your inventory</div>
-    <div class="modal-sub">Sign in with the Google account that's been added as an authorized user. Your sheet stays private — Rekago never stores your data.</div>
-    <div id="gSignInBtn" style="display:flex;justify-content:center;min-height:40px;margin:4px 0 2px"></div>
-    <div class="modal-error" id="modalError"></div>
-    <div class="modal-actions">
-      <button class="btn-modal-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
+    <div class="modal-title">Try the demo</div>
+    <div class="modal-sub">Enter your email to explore Rekago instantly — add products, record stock, create orders. This is a sandbox: nothing you do here is saved to a real Google Sheet.</div>
+    <div>
+      <label class="modal-label">Your Email</label>
+      <input class="modal-input" id="modalEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter') startSandbox()">
+      <div class="modal-error" id="modalError"></div>
     </div>
-    <div class="modal-note">Don't have access yet? Contact the sheet owner to be added as an authorized user.</div>
+    <div class="modal-actions">
+      <button class="btn-modal-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal-primary" id="btnStartDemo" onclick="startSandbox()">Start</button>
+    </div>
+    <div id="realAccessSection" style="display:none">
+      <div class="modal-note" style="margin-top:18px;margin-bottom:8px">Have real access to a connected Google Sheet?</div>
+      <div id="gSignInBtn" style="display:flex;justify-content:center;min-height:40px"></div>
+    </div>
   </div>
 </div>
 
@@ -206,14 +213,55 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 // GLOBAL STATE
 // ============================================================
 const REKAGO = {
+  // 'demo' (read-only, mock data) | 'sandbox' (any email, forms enabled,
+  // writes are local-only — never touch the real backend) | 'live'
+  // (verified Google Sign-In, writes go to the real Google Sheet).
   mode: 'demo', email: null, idToken: null, lang: 'en',
   skus: [], items: [], stockIn: [], stockOut: [], salesOrders: [],
 };
 
 // Flip to true once AuthorizedUsers has real people in it and you're ready
-// to let visitors attempt Google sign-in. Until then, Try Live and the
-// dashboard's demo-gate banner stay hidden — everyone sees demo mode only.
+// to let visitors attempt real Google sign-in (writes to your actual
+// Sheet). Until then, only the secondary "sign in with Google" option
+// inside the Try Demo modal stays hidden — the sandbox flow below is
+// always available and never touches the real backend either way.
 const TRY_LIVE_ENABLED = false;
+
+// Seed data for sandbox mode — a copy of the same numbers already shown
+// in demo mode across the app (dashboard/products/stock in/stock
+// out/sales orders), just collected in one place so every page reads
+// consistent, cross-linked data once someone starts a sandbox session
+// (e.g. a product added on Products shows up in Stock In's dropdown).
+const SANDBOX_SEED = {
+  skus: [
+    { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat','Category':'Single Item','Channels':'Tokopedia, TikTok Shop','Unit Price (IDR)':85000,'Cost Price (IDR)':42000,'Reorder Threshold':20,'Current Stock':84,'SKU Status':'In Stock','Notes':'' },
+    { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin','Category':'Single Item','Channels':'Shopee, TikTok Shop, Direct','Unit Price (IDR)':45000,'Cost Price (IDR)':18000,'Reorder Threshold':15,'Current Stock':56,'SKU Status':'In Stock','Notes':'' },
+    { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set','Category':'Gift Set','Channels':'Tokopedia, Shopee','Unit Price (IDR)':120000,'Cost Price (IDR)':58000,'Reorder Threshold':10,'Current Stock':8,'SKU Status':'Low Stock','Notes':'' },
+  ],
+  items: [
+    { 'SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Item Name':'Rattan Placemat — Natural' },
+    { 'SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Item Name':'Rattan Placemat — Dark' },
+    { 'SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Item Name':'Linen Napkin — Cream' },
+    { 'SKU ID':'BLM-002','Item ID':'BLM-002-SND','Item Name':'Linen Napkin — Sand' },
+    { 'SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Item Name':'Rattan + Napkin Gift Set' },
+  ],
+  stockIn: [
+    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Supplier Name':'Supplier Rattan Jakarta','Qty In':40,'Unit Cost (IDR)':22000,'Total Cost (IDR)':880000,'Type':'Restock' },
+    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Supplier Name':'Supplier Rattan Jakarta','Qty In':20,'Unit Cost (IDR)':22000,'Total Cost (IDR)':440000,'Type':'Restock' },
+    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Supplier Name':'Supplier Tekstil Bandung','Qty In':30,'Unit Cost (IDR)':9000,'Total Cost (IDR)':270000,'Type':'Initial Stock' },
+  ],
+  stockOut: [
+    { Date:'2026-05-23','Reference ID':'SO-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Channel':'TikTok Shop','Qty Out':6,'Total Revenue (IDR)':510000,'Type':'Sold' },
+    { Date:'2026-05-24','Reference ID':'SO-2026-002','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Channel':'Shopee','Qty Out':12,'Total Revenue (IDR)':540000,'Type':'Sold' },
+    { Date:'2026-05-22','Reference ID':'MKT-001','SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Channel':'Direct','Qty Out':4,'Total Revenue (IDR)':480000,'Type':'Sold' },
+  ],
+  salesOrders: [
+    { 'SO Number':'SO-2026-001',Date:'2026-05-23',Channel:'TikTok Shop','Customer Ref':'TTK-0482','Total Qty':6,'Total Revenue (IDR)':510000,Status:'Fulfilled' },
+    { 'SO Number':'SO-2026-002',Date:'2026-05-24',Channel:'Shopee','Customer Ref':'SHP-2291','Total Qty':12,'Total Revenue (IDR)':540000,Status:'Fulfilled' },
+    { 'SO Number':'SO-2026-003',Date:'2026-05-24',Channel:'Tokopedia','Customer Ref':'TOK-1182','Total Qty':10,'Total Revenue (IDR)':850000,Status:'Pending' },
+    { 'SO Number':'SO-2026-004',Date:'2026-05-22',Channel:'Direct','Customer Ref':'WA-ORDER','Total Qty':4,'Total Revenue (IDR)':480000,Status:'Fulfilled' },
+  ],
+};
 
 // ============================================================
 // SHARED CSS
@@ -349,11 +397,42 @@ let gsiInitialized = false;
 function openModal() {
   const errEl = document.getElementById('modalError');
   errEl.textContent = '';
+  document.getElementById('modalEmail').value = '';
   document.getElementById('modalOverlay').classList.add('open');
-  initGoogleSignIn();
+  document.getElementById('modalEmail').focus();
+  if (TRY_LIVE_ENABLED) {
+    document.getElementById('realAccessSection').style.display = 'block';
+    initGoogleSignIn();
+  } else {
+    document.getElementById('realAccessSection').style.display = 'none';
+  }
 }
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+}
+
+// Sandbox: any email, no verification, zero backend calls. Everything
+// added/changed only lives in REKAGO.* for this browser tab's session —
+// refreshing the page resets it back to SANDBOX_SEED.
+function startSandbox() {
+  const email = document.getElementById('modalEmail').value.trim();
+  const errEl = document.getElementById('modalError');
+  errEl.textContent = '';
+  if (!email || !email.includes('@')) { errEl.textContent = 'Enter a valid email address.'; return; }
+
+  REKAGO.mode        = 'sandbox';
+  REKAGO.email       = email;
+  REKAGO.skus        = SANDBOX_SEED.skus.map(row => ({ ...row }));
+  REKAGO.items       = SANDBOX_SEED.items.map(row => ({ ...row }));
+  REKAGO.stockIn     = SANDBOX_SEED.stockIn.map(row => ({ ...row }));
+  REKAGO.stockOut    = SANDBOX_SEED.stockOut.map(row => ({ ...row }));
+  REKAGO.salesOrders = SANDBOX_SEED.salesOrders.map(row => ({ ...row }));
+
+  closeModal();
+  setSandboxMode();
+  const activeTab = document.querySelector('.nav-tab.active');
+  if (activeTab) { const n = activeTab.textContent.toLowerCase().replace(/\s/g,''); PAGE_CACHE[n] = null; activeTab.click(); }
+  showToast("You're exploring in sandbox mode — nothing here is saved to a real Google Sheet.");
 }
 
 function initGoogleSignIn() {
@@ -399,10 +478,18 @@ async function handleCredentialResponse(response) {
 function setLiveMode() {
   document.getElementById('modeBadge').style.display     = 'none';
   document.getElementById('btnTryLive').style.display    = 'none';
+  document.getElementById('liveIndicatorLabel').textContent = 'Live';
+  document.getElementById('liveIndicator').style.display = 'flex';
+}
+function setSandboxMode() {
+  document.getElementById('modeBadge').style.display     = 'none';
+  document.getElementById('btnTryLive').style.display    = 'none';
+  document.getElementById('liveIndicatorLabel').textContent = 'Sandbox';
   document.getElementById('liveIndicator').style.display = 'flex';
 }
 function setDemoMode() {
   REKAGO.mode = 'demo'; REKAGO.idToken = null; REKAGO.email = null;
+  REKAGO.skus = []; REKAGO.items = []; REKAGO.stockIn = []; REKAGO.stockOut = []; REKAGO.salesOrders = [];
   document.getElementById('modeBadge').style.display     = '';
   document.getElementById('btnTryLive').style.display     = '';
   document.getElementById('liveIndicator').style.display  = 'none';
@@ -450,21 +537,41 @@ function showToast(msg, isError) {
 // ============================================================
 // HELPERS
 // ============================================================
-function requireLive() {
-  if (REKAGO.mode !== 'live') { showToast('Demo mode is read-only. Connect with a registered email to edit.', true); return false; }
+// True once REKAGO.skus/items/etc hold real data to read (sandbox or
+// live) rather than each page's own hardcoded demo-mode mock arrays.
+function hasLiveData() {
+  return REKAGO.mode === 'live' || REKAGO.mode === 'sandbox';
+}
+// Gate for every write action (Add Product, Stock In/Out, Sales Orders).
+// Sandbox passes this — its writes just go to REKAGO.* in memory, never
+// to the real backend (see each submit* function for the branch).
+function requireEditable() {
+  if (!hasLiveData()) { showToast('Enter your email to try editing — click Try Demo.', true); return false; }
   return true;
 }
+// Sandbox-only mirror of the backend's updateSkuStock (StockCalc.gs) —
+// applies a stock delta and recomputes SKU Status the same way, so the
+// sandbox experience matches what the real backend would do.
+function applySandboxStockDelta(skuId, delta) {
+  const sku = REKAGO.skus.find(s => s['SKU ID'] === skuId);
+  if (!sku) return;
+  const current   = Number(sku['Current Stock']) || 0;
+  const reorder   = Number(sku['Reorder Threshold']) || 0;
+  const newStock  = Math.max(0, current + delta);
+  sku['Current Stock'] = newStock;
+  sku['SKU Status'] = newStock === 0 ? 'Out of Stock' : newStock <= reorder ? 'Low Stock' : 'In Stock';
+}
 function lockDemoWriteForm(sectionId, buttonId) {
-  if (REKAGO.mode === 'live') return;
+  if (REKAGO.mode !== 'demo') return;
   const section = document.getElementById(sectionId);
   const button = document.getElementById(buttonId);
   if (!section || !button || section.querySelector('.demo-readonly-note')) return;
   const note = document.createElement('div');
   note.className = 'demo-readonly-note';
-  note.innerHTML = '<strong>Demo mode:</strong> this form is read-only. Connect with a registered email to make changes.';
+  note.innerHTML = '<strong>Demo mode:</strong> this form is read-only. Click Try Demo (top right) to enter an email and try editing.';
   section.insertBefore(note, section.firstElementChild);
   button.disabled = true;
-  button.textContent = 'Registered access required';
+  button.textContent = 'Try Demo to unlock';
 }
 function formatRp(val) { return 'Rp ' + Number(val).toLocaleString('id-ID'); }
 // Escapes a value before it's interpolated into an .innerHTML template.
@@ -553,9 +660,9 @@ const TOUR_STEPS = [
     pos:    'below',
   },
   {
-    title:  'Try Live',
-    body:   'Sign in with Google to connect your own Google Sheet. Your data stays private — Rekago never stores it.',
-    target: () => TRY_LIVE_ENABLED ? document.getElementById('btnTryLive') : null,
+    title:  'Try Demo',
+    body:   'Enter any email to explore with editable data — add products, record stock, create orders. Nothing is saved to a real Google Sheet.',
+    target: () => document.getElementById('btnTryLive'),
     pos:    'below-left',
   },
 ];
@@ -658,7 +765,6 @@ function skipTour() {
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
   document.head.insertAdjacentHTML('beforeend', SHARED_CSS);
-  if (!TRY_LIVE_ENABLED) document.getElementById('btnTryLive').style.display = 'none';
   runSplash();
 });
 </script>

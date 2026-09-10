@@ -5,14 +5,14 @@
   <div class="page-title">Dashboard</div>
   <div class="page-meta" id="dashMeta">Last updated: demo mode</div>
 
-  <!-- Demo gate (hidden in live mode) -->
+  <!-- Demo gate (hidden once sandbox/live) -->
   <div class="demo-gate" id="demoGate" style="display:none">
     <div class="demo-gate-text">
       <strong>Want to edit data?</strong>
-      <p>Sign in with Google to unlock editing in live mode</p>
+      <p>Enter your email to try editing in a sandbox — nothing is saved to a real Google Sheet</p>
     </div>
     <div class="demo-gate-right">
-      <button class="btn-unlock" onclick="openModal()">Sign In</button>
+      <button class="btn-unlock" onclick="openModal()">Try Demo</button>
     </div>
   </div>
 
@@ -136,7 +136,7 @@ let chartPeriod  = 'week';
 
 // ── Init ──────────────────────────────────────────────────
 function init_dashboard() {
-  const skus  = REKAGO.mode === 'live' ? REKAGO.skus.map(s => ({
+  const skus  = hasLiveData() ? REKAGO.skus.map(s => ({
     id:      s['SKU ID'],
     name:    s['SKU Name'],
     stock:   Number(s['Current Stock']),
@@ -145,9 +145,9 @@ function init_dashboard() {
   })) : DASH_MOCK.skus;
 
   // Metrics
-  const items   = REKAGO.mode === 'live' ? REKAGO.items : [{},{},{},{},{}];
+  const items   = hasLiveData() ? REKAGO.items : [{},{},{},{},{}];
   const lowCount = skus.filter(s => s.status === 'Low Stock').length;
-  const soldQty  = REKAGO.mode === 'live'
+  const soldQty  = hasLiveData()
     ? REKAGO.stockOut.filter(r => r['Type'] === 'Sold').reduce((sum, r) => sum + Number(r['Qty Out']), 0)
     : 22;
 
@@ -157,16 +157,16 @@ function init_dashboard() {
   document.getElementById('mSold').textContent  = soldQty;
   document.getElementById('lowBadge').textContent = lowCount + ' low';
 
-  // Demo gate — only worth showing once Try Live is actually enabled
-  if (REKAGO.mode === 'demo' && typeof TRY_LIVE_ENABLED !== 'undefined' && TRY_LIVE_ENABLED) {
+  // Demo gate
+  if (REKAGO.mode === 'demo') {
     document.getElementById('demoGate').style.display = 'flex';
   }
 
   // Meta
   document.getElementById('dashMeta').textContent =
-    REKAGO.mode === 'live'
-      ? 'Last updated: ' + new Date().toLocaleTimeString() + ' · Live mode'
-      : 'Last updated: today · Demo mode';
+    REKAGO.mode === 'live'    ? 'Last updated: ' + new Date().toLocaleTimeString() + ' · Live mode' :
+    REKAGO.mode === 'sandbox' ? 'Last updated: ' + new Date().toLocaleTimeString() + ' · Sandbox mode' :
+    'Last updated: today · Demo mode';
 
   // SKU table
   document.getElementById('skuTableBody').innerHTML = skus.map(s => {

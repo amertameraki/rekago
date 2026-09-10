@@ -103,7 +103,7 @@ function init_stockout() {
 }
 
 function populateSoSkus() {
-  const skus = REKAGO.mode === 'live' ? REKAGO.skus : [
+  const skus = hasLiveData() ? REKAGO.skus : [
     { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat' },
     { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin' },
     { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set' },
@@ -115,7 +115,7 @@ function populateSoSkus() {
 
 function populateSoItems() {
   const skuId = document.getElementById('soSkuId').value;
-  const items = REKAGO.mode === 'live' ? REKAGO.items : ITEMS_MOCK_SO;
+  const items = hasLiveData() ? REKAGO.items : ITEMS_MOCK_SO;
   document.getElementById('soItemId').innerHTML =
     items.filter(i => i['SKU ID'] === skuId)
          .map(i => `<option value="${escapeHtml(i['Item ID'])}">${escapeHtml(i['Item ID'])} — ${escapeHtml(i['Item Name'])}</option>`)
@@ -123,7 +123,7 @@ function populateSoItems() {
 }
 
 function renderStockOutTable() {
-  const rows = REKAGO.mode === 'live' ? REKAGO.stockOut : SO_MOCK;
+  const rows = hasLiveData() ? REKAGO.stockOut : SO_MOCK;
   document.getElementById('stockOutBody').innerHTML = rows.length
     ? rows.map(r => `<tr>
         <td>${escapeHtml(r.Date)}</td>
@@ -139,7 +139,7 @@ function renderStockOutTable() {
 }
 
 async function submitStockOut() {
-  if (!requireLive()) return;
+  if (!requireEditable()) return;
   const payload = {
     date:       document.getElementById('soDate').value,
     refId:      document.getElementById('soRefId').value,
@@ -153,6 +153,26 @@ async function submitStockOut() {
     notes:      document.getElementById('soNotes').value,
   };
   if (!payload.qty || Number(payload.qty) < 1) { showToast('Qty must be at least 1.', true); return; }
+
+  if (REKAGO.mode === 'sandbox') {
+    const qtyNum        = Number(payload.qty);
+    const unitPriceNum  = Number(payload.unitPrice) || 0;
+    REKAGO.stockOut.unshift({
+      Date: payload.date || new Date().toISOString().slice(0, 10),
+      'Reference ID': payload.refId || '',
+      'SKU ID': payload.skuId,
+      'Item ID': payload.itemId,
+      'Channel': payload.channel || '',
+      'Qty Out': qtyNum,
+      'Total Revenue (IDR)': qtyNum * unitPriceNum,
+      'Type': payload.type || 'Sold',
+    });
+    if (payload.type !== 'Return Inbound') applySandboxStockDelta(payload.skuId, -qtyNum);
+    showToast('Stock Out recorded (sandbox — not saved to a real sheet).');
+    renderStockOutTable();
+    return;
+  }
+
   const res = await apiPost('addStockOut', payload);
   if (res.ok) {
     showToast('Stock Out recorded.');

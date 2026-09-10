@@ -339,7 +339,7 @@ function plPopulateProducts() {
 }
 
 function plGetProducts() {
-  if (REKAGO.mode === 'live' && REKAGO.skus.length) return REKAGO.skus.map(plNormalizeProduct).filter(p => p.sku);
+  if (hasLiveData() && REKAGO.skus.length) return REKAGO.skus.map(plNormalizeProduct).filter(p => p.sku);
   try {
     const saved = localStorage.getItem('rekago_inventory_preview_data');
     if (saved) {

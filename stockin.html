@@ -94,7 +94,7 @@ function init_stockin() {
 }
 
 function populateSiSkus() {
-  const skus = REKAGO.mode === 'live' ? REKAGO.skus : [
+  const skus = hasLiveData() ? REKAGO.skus : [
     { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat' },
     { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin' },
     { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set' },
@@ -106,7 +106,7 @@ function populateSiSkus() {
 
 function populateSiItems() {
   const skuId = document.getElementById('siSkuId').value;
-  const items = REKAGO.mode === 'live' ? REKAGO.items : ITEMS_MOCK_SI;
+  const items = hasLiveData() ? REKAGO.items : ITEMS_MOCK_SI;
   document.getElementById('siItemId').innerHTML =
     items.filter(i => i['SKU ID'] === skuId)
          .map(i => `<option value="${escapeHtml(i['Item ID'])}">${escapeHtml(i['Item ID'])} — ${escapeHtml(i['Item Name'])}</option>`)
@@ -114,7 +114,7 @@ function populateSiItems() {
 }
 
 function renderStockInTable() {
-  const rows = REKAGO.mode === 'live' ? REKAGO.stockIn : SI_MOCK;
+  const rows = hasLiveData() ? REKAGO.stockIn : SI_MOCK;
   document.getElementById('stockInBody').innerHTML = rows.length
     ? rows.map(r => `<tr>
         <td>${escapeHtml(r.Date)}</td>
@@ -131,7 +131,7 @@ function renderStockInTable() {
 }
 
 async function submitStockIn() {
-  if (!requireLive()) return;
+  if (!requireEditable()) return;
   const payload = {
     date:       document.getElementById('siDate').value,
     refId:      document.getElementById('siRefId').value,
@@ -144,6 +144,27 @@ async function submitStockIn() {
     notes:      document.getElementById('siNotes').value,
   };
   if (!payload.qty || Number(payload.qty) < 1) { showToast('Qty must be at least 1.', true); return; }
+
+  if (REKAGO.mode === 'sandbox') {
+    const qtyNum      = Number(payload.qty);
+    const unitCostNum = Number(payload.unitCost) || 0;
+    REKAGO.stockIn.unshift({
+      Date: payload.date || new Date().toISOString().slice(0, 10),
+      'Reference ID': payload.refId || '',
+      'SKU ID': payload.skuId,
+      'Item ID': payload.itemId,
+      'Supplier Name': payload.supplier || '',
+      'Qty In': qtyNum,
+      'Unit Cost (IDR)': unitCostNum,
+      'Total Cost (IDR)': qtyNum * unitCostNum,
+      'Type': payload.type || 'Restock',
+    });
+    applySandboxStockDelta(payload.skuId, qtyNum);
+    showToast('Stock In recorded (sandbox — not saved to a real sheet).');
+    renderStockInTable();
+    return;
+  }
+
   const res = await apiPost('addStockIn', payload);
   if (res.ok) {
     showToast('Stock In recorded.');

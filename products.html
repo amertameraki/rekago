@@ -98,7 +98,7 @@ function init_products() {
 }
 
 function renderProducts() {
-  const rows = REKAGO.mode === 'live' ? REKAGO.skus : PRODUCTS_MOCK;
+  const rows = hasLiveData() ? REKAGO.skus : PRODUCTS_MOCK;
   const q    = document.getElementById('productSearch').value.toLowerCase();
 
   const filtered = rows.filter(s =>
@@ -130,7 +130,7 @@ function filterCat(btn, cat) {
 }
 
 async function submitAddProduct() {
-  if (!requireLive()) return;
+  if (!requireEditable()) return;
   const channels = [...document.querySelectorAll('#page-frame input[type=checkbox]:checked')].map(c => c.value);
   const payload  = {
     skuId:            document.getElementById('fpSkuId').value.trim(),
@@ -143,6 +143,28 @@ async function submitAddProduct() {
     notes:            document.getElementById('fpNotes').value,
   };
   if (!payload.skuId || !payload.skuName) { showToast('SKU ID and name are required.', true); return; }
+
+  if (REKAGO.mode === 'sandbox') {
+    if (REKAGO.skus.some(s => s['SKU ID'] === payload.skuId)) {
+      showToast('SKU ID already exists: ' + payload.skuId, true); return;
+    }
+    REKAGO.skus.push({
+      'SKU ID': payload.skuId,
+      'SKU Name': payload.skuName,
+      'Category': payload.category || '',
+      'Channels': channels.join(', '),
+      'Unit Price (IDR)': Number(payload.unitPrice) || 0,
+      'Cost Price (IDR)': Number(payload.costPrice) || 0,
+      'Reorder Threshold': Number(payload.reorderThreshold) || 0,
+      'Current Stock': 0,
+      'SKU Status': 'In Stock',
+      'Notes': payload.notes || '',
+    });
+    showToast('Product added (sandbox — not saved to a real sheet).');
+    renderProducts();
+    return;
+  }
+
   const res = await apiPost('addProduct', payload);
   if (res.ok) {
     showToast('Product added.');

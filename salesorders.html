@@ -225,7 +225,7 @@ function init_salesorders() {
 }
 
 function renderOrders() {
-  const rows = REKAGO.mode === 'live' ? REKAGO.salesOrders : ORDERS_MOCK;
+  const rows = hasLiveData() ? REKAGO.salesOrders : ORDERS_MOCK;
   const q    = document.getElementById('orderSearch').value.toLowerCase();
 
   const filtered = rows.filter(o =>
@@ -262,7 +262,7 @@ function populateOrderProducts() {
 }
 
 function getOrderProducts() {
-  if (REKAGO.mode === 'live' && REKAGO.skus.length) return REKAGO.skus.map(normalizeOrderProduct).filter(p => p.sku);
+  if (hasLiveData() && REKAGO.skus.length) return REKAGO.skus.map(normalizeOrderProduct).filter(p => p.sku);
 
   try {
     const saved = localStorage.getItem('rekago_inventory_preview_data');
@@ -406,7 +406,7 @@ function escapeOrderHtml(value) {
 }
 
 async function submitNewOrder() {
-  if (!requireLive()) return;
+  if (!requireEditable()) return;
   const payload = {
     soNumber:     document.getElementById('nsoNum').value.trim(),
     date:         document.getElementById('nsoDate').value,
@@ -425,6 +425,27 @@ async function submitNewOrder() {
     })),
   };
   if (!payload.soNumber) { showToast('SO Number is required.', true); return; }
+
+  if (REKAGO.mode === 'sandbox') {
+    if (REKAGO.salesOrders.some(o => o['SO Number'] === payload.soNumber)) {
+      showToast('SO Number already exists: ' + payload.soNumber, true); return;
+    }
+    REKAGO.salesOrders.unshift({
+      'SO Number': payload.soNumber,
+      Date: payload.date || new Date().toISOString().slice(0, 10),
+      Channel: payload.channel,
+      'Customer Ref': payload.customerRef || '',
+      'Total Qty': Number(payload.totalQty) || 0,
+      'Total Revenue (IDR)': Number(payload.totalRevenue) || 0,
+      Status: payload.status || 'Pending',
+    });
+    showToast('Sales Order created (sandbox — not saved to a real sheet).');
+    orderLines = [];
+    renderOrderLines();
+    renderOrders();
+    return;
+  }
+
   const res = await apiPost('createSO', payload);
   if (res.ok) {
     showToast('Sales Order created.');

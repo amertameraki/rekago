@@ -330,12 +330,12 @@ async function init_inventory() {
 }
 
 function inventoryLoadData() {
-  if (REKAGO.mode === 'live' && REKAGO.skus.length) {
+  if (hasLiveData() && REKAGO.skus.length) {
     return {
       rows: REKAGO.skus.map(inventoryNormalizeProduct),
       source: {
-        label: 'Live',
-        note: REKAGO.email || 'Google Sheet',
+        label: REKAGO.mode === 'live' ? 'Live' : 'Sandbox',
+        note: REKAGO.mode === 'live' ? (REKAGO.email || 'Google Sheet') : 'not saved to a real sheet',
       },
     };
   }
@@ -556,7 +556,7 @@ function inventoryResetData() {
   inventorySource = loaded.source;
   inventoryPopulateFilters();
   inventoryRender();
-  showToast(REKAGO.mode === 'live' ? 'Live inventory restored.' : 'Sample inventory restored.');
+  showToast(hasLiveData() ? 'Inventory restored.' : 'Sample inventory restored.');
 }
 
 function inventoryEscape(value) {
