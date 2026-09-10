@@ -459,7 +459,12 @@ function plRenderLists() {
         const totalCost = pl.lines.reduce((sum, line) => sum + (line.qty * line.unitCost), 0);
         const receiveButton = pl.status === 'Received' || pl.status === 'Cancelled'
           ? ''
-          : `<button class="btn-receive" onclick="plReceive('${plEscapeAttr(pl.number)}')">Receive</button>`;
+          // Passed via data-* + this.dataset, not interpolated into a quoted
+          // JS string literal inside onclick — the browser HTML-decodes
+          // attribute values *before* an inline handler is parsed as JS, so
+          // HTML-escaping pl.number here would not stop it from breaking out
+          // of a 'single-quoted' onclick="plReceive('...')" string.
+          : `<button class="btn-receive" data-pl-number="${plEscape(pl.number)}" onclick="plReceive(this.dataset.plNumber)">Receive</button>`;
         return `<tr>
           <td><span class="mono">${plEscape(pl.number)}</span></td>
           <td>${plEscape(pl.date)}</td>
@@ -526,9 +531,5 @@ function plEscape(value) {
     '"': '&quot;',
     "'": '&#39;',
   }[char]));
-}
-
-function plEscapeAttr(value) {
-  return plEscape(value).replace(/`/g, '&#96;');
 }
 </script>
