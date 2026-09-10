@@ -352,8 +352,13 @@ async function loadPage(name) {
       const script = document.createElement('script');
       [...oldScript.attributes].forEach(attr => script.setAttribute(attr.name, attr.value));
       script.textContent = oldScript.textContent;
+      // A single failed/blocked script (e.g. a third-party tag some host
+      // injects into the HTML response — Vercel's preview-feedback widget
+      // does this even to fragments fetched via fetch(), and CSP then
+      // blocks it) must not abort the rest of this page's init — that
+      // would silently skip init_<name>() and leave the page blank.
       const loaded = script.src
-        ? new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; })
+        ? new Promise(resolve => { script.onload = resolve; script.onerror = resolve; })
         : Promise.resolve();
       oldScript.replaceWith(script);
       await loaded;
