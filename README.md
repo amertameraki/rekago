@@ -38,16 +38,37 @@ The point of Sandbox: anyone can click around and genuinely try the product with
 ## The tabs, one by one
 
 ### Dashboard (`dashboard.html`)
-The landing page. Four metric tiles (Total SKUs, Total Items, Low Stock count, Sold This Week), a SKU overview table with a stock bar per row, and a Revenue & Orders chart (Chart.js) toggleable between Week/Month. In Demo mode, shows the "Want to edit data?" banner prompting Try Demo.
+**What it's for:** a quick "is everything okay?" health check of the whole operation — the first thing you see, before you go dig into a specific tab.
+
+**What it covers:**
+- Four metric tiles: Total SKUs, Total Items (variants), how many SKUs are currently Low Stock, and units Sold This Week
+- A SKU overview table — every SKU with a visual stock bar and status pill, so low/out-of-stock products jump out immediately
+- A Revenue & Orders chart (bars = revenue, line = order count), toggleable between Week and Month, to see whether sales are trending up or down
+- In Demo mode, a "Want to edit data?" banner nudging you toward Try Demo
+
+It's read-only — there's nothing to add or record here, it only reflects what's already in Products/Stock In/Stock Out.
 
 ### Products (`products.html`)
-The SKU catalog. An "Add Product" form (SKU ID, name, category, unit/cost price, reorder threshold, sales channels, notes) and a searchable/filterable table of existing SKUs. Adding a product here is what makes it show up everywhere else (Stock In/Out dropdowns, Inventory, Sales Orders' product picker).
+**What it's for:** the master catalog — the source of truth for what products exist, what they cost, what they sell for, and when they need reordering. Every other tab depends on a SKU existing here first: Stock In/Out's SKU dropdowns, Inventory, and Sales Orders' product picker all read from this same list.
+
+**What it covers:**
+- An **Add Product** form to register a new SKU: SKU ID, product name, category, unit price, cost price, reorder threshold, which sales channels it's listed on (Tokopedia/Shopee/TikTok Shop/Direct), and optional notes
+- A searchable, filterable (by category) table of every existing SKU, showing its channels, unit price, current stock, and status
+
+Adding a SKU here doesn't create any stock — a new product starts at 0 units until you record a Stock In for it.
 
 ### Inventory (`inventory.html`)
 A richer, read-only catalog view — grid or table layout, with brand/classification filters and low-stock/out-of-stock status filtering. Has its own "Import JSON" feature for pasting arbitrary catalog data to preview (stored in `localStorage`, browser-only, unrelated to Sandbox mode).
 
 ### Packing Lists (`packinglists.html`)
-Tracks inbound shipments from suppliers: build a packing list from line items (SKU, qty, unit cost), then mark it "Received." This page is currently **always** local-only (stored in `localStorage`) — even in Live mode, the "Receive" action just shows a toast that the backend endpoint for it doesn't exist yet.
+**What it's for:** tracking shipments from suppliers that are *on their way* — the "what's expected to arrive, and when" list. This is distinct from Stock In, which is for stock that has *already arrived and been counted*. Packing Lists exists so you have visibility into inbound inventory before it's a confirmed Stock In record.
+
+**What it covers:**
+- Metric tiles: how many packing lists are still open (not yet received), total inbound units expected, and total units already received
+- A form to build a new packing list: header details (PL number, date, supplier, status — Draft / In Transit / Received / Cancelled, notes) plus line items (pick a SKU, quantity, unit cost) with running totals
+- A table of all packing lists with a "Receive" action to mark one as arrived
+
+Right now this whole tab is a **local-only preview** — everything is stored in your browser (`localStorage`), including in Live mode. Clicking "Receive" while signed in shows a toast explaining the real backend endpoint for it doesn't exist yet ("live receive comes next"); it doesn't write to your Google Sheet or touch SKU stock counts.
 
 ### Stock In (`stockin.html`)
 Records inbound stock (restock, initial stock, or a return). Picking a SKU populates the Item dropdown. Submitting increases that SKU's `Current Stock` and recalculates its status (In Stock / Low Stock / Out of Stock) against its reorder threshold — both the real backend (`StockCalc.gs`) and Sandbox mode (`applySandboxStockDelta()` in `index.html`) do this exact same calculation.
