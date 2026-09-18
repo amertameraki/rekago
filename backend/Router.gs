@@ -63,6 +63,7 @@ function doPost(e) {
       case 'addStockIn':       return addStockIn(body, email);
       case 'addStockOut':      return addStockOut(body, email);
       case 'createSO':         return createSO(body, email);
+      case 'createPackingList': return createPackingList(body, email);
       case 'updateItemStatus': return updateItemStatus(body, email);
 
       default: return err('Unknown action: ' + action, 404);
