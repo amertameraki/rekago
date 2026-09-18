@@ -55,6 +55,7 @@ function doPost(e) {
       case 'getStockIn':      return ok({ data: getStockIn() });
       case 'getStockOut':     return ok({ data: getStockOut() });
       case 'getSalesOrders':  return ok({ data: getSalesOrders() });
+      case 'getPackingLists': return ok({ data: getPackingLists() });
       case 'getActivityLog':  return ok({ data: getActivityLog() });
 
       // ── Writes ──

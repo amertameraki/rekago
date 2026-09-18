@@ -10,6 +10,8 @@ const SHEET = {
   STOCK_IN:     'Stock In',
   STOCK_OUT:    'Stock Out',
   SALES_ORDERS: 'Sales Orders',
+  PACKING_LISTS: 'Packing Lists',
+  PACKING_LIST_LINES: 'Packing List Lines',
   ITEM_LOG:     'Item Status Log',
   ACTIVITY_LOG: 'Activity Log',
   SETTINGS:     'Settings',
@@ -42,6 +44,16 @@ const COL = {
     SO_NUM: 1, DATE: 2, CHANNEL: 3, CUSTOMER_REF: 4, TOTAL_SKUS: 5,
     TOTAL_QTY: 6, TOTAL_REVENUE: 7, STATUS: 8, NOTES: 9,
     CREATED_BY: 10, CREATED_AT: 11,
+  },
+  PACKING_LISTS: {
+    PL_NUMBER: 1, DATE: 2, SUPPLIER: 3, STATUS: 4, NOTES: 5,
+    TOTAL_LINES: 6, TOTAL_QTY: 7, TOTAL_COST: 8,
+    CREATED_BY: 9, CREATED_AT: 10, RECEIVED_BY: 11, RECEIVED_AT: 12,
+    CANCELLED_BY: 13, CANCELLED_AT: 14,
+  },
+  PACKING_LIST_LINES: {
+    PL_NUMBER: 1, LINE_NUMBER: 2, SKU_ID: 3, ITEM_ID: 4,
+    PRODUCT_NAME: 5, ITEM_NAME: 6, QTY: 7, UNIT_COST: 8, TOTAL_COST: 9,
   },
   ITEM_LOG: {
     TIMESTAMP: 1, ITEM_ID: 2, ITEM_NAME: 3,
@@ -78,6 +90,8 @@ function getItemsSheet()        { return getSheet(SHEET.ITEMS);        }
 function getStockInSheet()      { return getSheet(SHEET.STOCK_IN);     }
 function getStockOutSheet()     { return getSheet(SHEET.STOCK_OUT);    }
 function getSalesOrdersSheet()  { return getSheet(SHEET.SALES_ORDERS); }
+function getPackingListsSheet() { return getSheet(SHEET.PACKING_LISTS); }
+function getPackingListLinesSheet() { return getSheet(SHEET.PACKING_LIST_LINES); }
 function getItemLogSheet()      { return getSheet(SHEET.ITEM_LOG);     }
 function getActivityLogSheet()  { return getSheet(SHEET.ACTIVITY_LOG); }
 function getSettingsSheet()     { return getSheet(SHEET.SETTINGS);     }
