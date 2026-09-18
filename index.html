@@ -127,9 +127,105 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--nav); color: var(--gold); font-size: 13px; font-weight: 500; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(64,57,25,0.2); z-index: 300; transform: translateY(80px); opacity: 0; transition: all 0.25s ease; pointer-events: none; }
 .toast.show { transform: translateY(0); opacity: 1; }
 .toast.error { background: var(--danger); color: #fff; }
+
+/* DESKTOP-ONLY NOTICE */
+#desktop-notice { display: none; }
+
+@media (max-width: 1023px) {
+  body { min-height: 100%; overflow: hidden; }
+  #splash, #tourBox, #app, .modal-overlay, .toast { display: none !important; }
+  #desktop-notice {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 32px 24px;
+    background:
+      radial-gradient(circle at 50% 18%, rgba(242,187,22,0.14), transparent 34%),
+      var(--nav);
+  }
+  .desktop-notice-card {
+    width: min(100%, 430px);
+    padding: 38px 30px 32px;
+    border: 1px solid rgba(242,187,22,0.22);
+    border-radius: 18px;
+    background: rgba(253,250,243,0.98);
+    box-shadow: 0 24px 70px rgba(20,17,5,0.32);
+    text-align: center;
+  }
+  .desktop-notice-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 62px;
+    height: 62px;
+    margin-bottom: 22px;
+    border-radius: 16px;
+    background: var(--gold);
+    color: var(--nav);
+  }
+  .desktop-notice-mark svg { width: 31px; height: 31px; }
+  .desktop-notice-brand {
+    margin-bottom: 14px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--amber);
+  }
+  .desktop-notice-title {
+    margin-bottom: 12px;
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(30px, 8vw, 38px);
+    font-weight: 400;
+    line-height: 1.08;
+    letter-spacing: -0.5px;
+    color: var(--nav);
+  }
+  .desktop-notice-copy {
+    max-width: 330px;
+    margin: 0 auto;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .desktop-notice-rule {
+    width: 42px;
+    height: 3px;
+    margin: 24px auto 18px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--gold);
+  }
+  .desktop-notice-foot {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+}
 </style>
 </head>
 <body>
+
+<!-- MOBILE/TABLET NOTICE -->
+<main id="desktop-notice" aria-labelledby="desktopNoticeTitle">
+  <section class="desktop-notice-card">
+    <div class="desktop-notice-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="13" rx="2"></rect>
+        <path d="M8 21h8M12 17v4"></path>
+      </svg>
+    </div>
+    <div class="desktop-notice-brand">Rekago</div>
+    <h1 class="desktop-notice-title" id="desktopNoticeTitle">Kindly open on desktop</h1>
+    <p class="desktop-notice-copy">Rekago is designed as a desktop workspace. Please open this page on a laptop or desktop computer for the best experience.</p>
+    <hr class="desktop-notice-rule">
+    <p class="desktop-notice-foot">Inventory, rekapped.</p>
+  </section>
+</main>
 
 <!-- SPLASH — must be first so it covers everything -->
 <div id="splash">
