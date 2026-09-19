@@ -323,6 +323,11 @@ const REKAGO = {
 // always available and never touches the real backend either way.
 const TRY_LIVE_ENABLED = false;
 
+// Keep the backend-backed Packing Lists workflow hidden until its staging
+// read/create tests pass. When false, Packing Lists keeps using its existing
+// browser-only preview data in every mode.
+const PACKING_LISTS_LIVE_ENABLED = false;
+
 // Seed data for sandbox mode — a copy of the same numbers already shown
 // in demo mode across the app (dashboard/products/stock in/stock
 // out/sales orders), just collected in one place so every page reads
