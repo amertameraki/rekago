@@ -57,19 +57,28 @@ Draft ───────→ In Transit ───────→ Received
 | Cancelled By | Email | Future cancel action |
 | Cancelled At | ISO timestamp | Future cancel action |
 
-### Sheet: Packing List Lines
+### Sheet: PL Line Items
 
 | Column | Type | Source |
 |---|---|---|
 | PL Number | Text | Parent packing list |
-| Line Number | Positive integer | Backend generated |
 | SKU ID | Text | Selected product |
-| Item ID | Text | Selected variant/item |
 | Product Name | Text | Looked up by backend |
-| Item Name | Text | Looked up by backend |
 | Qty | Positive whole number | User input |
-| Unit Cost (IDR) | Non-negative number | User input |
-| Total Cost (IDR) | Number | Backend calculated |
+| Unit Cost | Non-negative number | User input |
+| Total Cost | Number | Backend calculated |
+| Created By | Email | Verified Google identity |
+| Created At | ISO timestamp | Backend generated |
+| Line Number | Positive integer | Backend generated; appended for the new workflow |
+| Item ID | Text | Selected variant/item; appended for the new workflow |
+| Item Name | Text | Looked up by backend; appended for the new workflow |
+
+The first eight columns above are the existing sheet structure and remain in
+their current order. The backend appends the final three headers only when a
+packing list is first created through the new workflow. Existing rows are not
+rewritten or deleted. Historical rows without an Item ID remain readable but
+must be matched to an Item before a future receive-to-stock action can process
+them safely.
 
 ## Authenticated API contract
 

@@ -11,7 +11,7 @@ const SHEET = {
   STOCK_OUT:    'Stock Out',
   SALES_ORDERS: 'Sales Orders',
   PACKING_LISTS: 'Packing Lists',
-  PACKING_LIST_LINES: 'Packing List Lines',
+  PACKING_LIST_LINES: 'PL Line Items',
   ITEM_LOG:     'Item Status Log',
   ACTIVITY_LOG: 'Activity Log',
   SETTINGS:     'Settings',
@@ -52,8 +52,9 @@ const COL = {
     CANCELLED_BY: 13, CANCELLED_AT: 14,
   },
   PACKING_LIST_LINES: {
-    PL_NUMBER: 1, LINE_NUMBER: 2, SKU_ID: 3, ITEM_ID: 4,
-    PRODUCT_NAME: 5, ITEM_NAME: 6, QTY: 7, UNIT_COST: 8, TOTAL_COST: 9,
+    PL_NUMBER: 1, SKU_ID: 2, PRODUCT_NAME: 3, QTY: 4,
+    UNIT_COST: 5, TOTAL_COST: 6, CREATED_BY: 7, CREATED_AT: 8,
+    LINE_NUMBER: 9, ITEM_ID: 10, ITEM_NAME: 11,
   },
   ITEM_LOG: {
     TIMESTAMP: 1, ITEM_ID: 2, ITEM_NAME: 3,

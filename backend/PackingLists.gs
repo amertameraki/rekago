@@ -1,7 +1,64 @@
 // ============================================================
 // PackingLists.gs — Rekago Backend
-// Read-only packing-list operations for the first implementation slice.
+// Packing-list operations. The detail sheet keeps the existing "PL Line Items"
+// columns and adds new fields only at the right-hand side when first needed.
 // ============================================================
+
+const PACKING_LIST_HEADERS = [
+  'PL Number', 'Date', 'Supplier', 'Status', 'Notes',
+  'Total Lines', 'Total Qty', 'Total Cost (IDR)',
+  'Created By', 'Created At', 'Received By', 'Received At',
+  'Cancelled By', 'Cancelled At',
+];
+
+const PACKING_LIST_LINE_HEADERS = [
+  'PL Number', 'SKU ID', 'Product Name', 'Qty', 'Unit Cost', 'Total Cost',
+  'Created By', 'Created At', 'Line Number', 'Item ID', 'Item Name',
+];
+
+function packingListValue(row, names) {
+  for (let index = 0; index < names.length; index++) {
+    const value = row[names[index]];
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return '';
+}
+
+/**
+ * Preserves every existing header and appends only missing required headers.
+ * Nothing is renamed, reordered, or removed.
+ */
+function ensurePackingListHeaders(sheet, requiredHeaders) {
+  const lastColumn = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
+    .map(value => String(value || '').trim());
+
+  while (headers.length && !headers[headers.length - 1]) headers.pop();
+
+  const present = {};
+  headers.forEach(header => {
+    if (!header) return;
+    if (present[header]) throw new Error('Duplicate sheet header: ' + header);
+    present[header] = true;
+  });
+
+  const missing = requiredHeaders.filter(header => !present[header]);
+  if (missing.length) {
+    sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
+    headers.push(...missing);
+  }
+  return headers;
+}
+
+function appendPackingListRows(sheet, rows, requiredHeaders) {
+  const headers = ensurePackingListHeaders(sheet, requiredHeaders);
+  const values = rows.map(row => headers.map(header =>
+    Object.prototype.hasOwnProperty.call(row, header) ? row[header] : ''
+  ));
+  const firstRow = sheet.getLastRow() + 1;
+  sheet.getRange(firstRow, 1, values.length, headers.length).setValues(values);
+  return firstRow;
+}
 
 /**
  * Returns packing-list headers with their line items nested under `lines`.
@@ -16,15 +73,17 @@ function getPackingLists() {
     const number = String(row['PL Number'] || '').trim();
     if (!number) return;
     if (!linesByNumber[number]) linesByNumber[number] = [];
+    const fallbackLineNumber = linesByNumber[number].length + 1;
+    const productName = String(row['Product Name'] || '').trim();
     linesByNumber[number].push({
-      lineNumber: Number(row['Line Number']) || 0,
+      lineNumber: Number(row['Line Number']) || fallbackLineNumber,
       skuId: String(row['SKU ID'] || '').trim(),
       itemId: String(row['Item ID'] || '').trim(),
-      productName: String(row['Product Name'] || '').trim(),
-      itemName: String(row['Item Name'] || '').trim(),
+      productName,
+      itemName: String(row['Item Name'] || productName).trim(),
       qty: Number(row['Qty']) || 0,
-      unitCost: Number(row['Unit Cost (IDR)']) || 0,
-      totalCost: Number(row['Total Cost (IDR)']) || 0,
+      unitCost: Number(packingListValue(row, ['Unit Cost', 'Unit Cost (IDR)'])) || 0,
+      totalCost: Number(packingListValue(row, ['Total Cost', 'Total Cost (IDR)'])) || 0,
     });
   });
 
@@ -42,7 +101,7 @@ function getPackingLists() {
       notes: String(row['Notes'] || '').trim(),
       totalLines: Number(row['Total Lines']) || 0,
       totalQty: Number(row['Total Qty']) || 0,
-      totalCost: Number(row['Total Cost (IDR)']) || 0,
+      totalCost: Number(packingListValue(row, ['Total Cost (IDR)', 'Total Cost'])) || 0,
       createdBy: String(row['Created By'] || '').trim(),
       createdAt: packingListTimestamp(row['Created At']),
       receivedBy: String(row['Received By'] || '').trim(),
@@ -156,39 +215,42 @@ function createPackingList(body, email) {
       return err('PL Number already exists: ' + number, 409);
     }
 
-    headerRow = headerSheet.getLastRow() + 1;
-    headerSheet.getRange(headerRow, 1, 1, 14).setValues([[
-      number,
-      date,
-      supplier,
-      status,
-      notes,
-      normalizedLines.length,
-      totalQty,
-      totalCost,
-      email,
-      nowIso(),
-      '',
-      '',
-      '',
-      '',
-    ]]);
+    const createdAt = nowIso();
+    headerRow = appendPackingListRows(headerSheet, [{
+      'PL Number': number,
+      'Date': date,
+      'Supplier': supplier,
+      'Status': status,
+      'Notes': notes,
+      'Total Lines': normalizedLines.length,
+      'Total Qty': totalQty,
+      'Total Cost (IDR)': totalCost,
+      'Created By': email,
+      'Created At': createdAt,
+      'Received By': '',
+      'Received At': '',
+      'Cancelled By': '',
+      'Cancelled At': '',
+    }], PACKING_LIST_HEADERS);
 
-    const lineRows = normalizedLines.map(line => [
-      number,
-      line.lineNumber,
-      line.skuId,
-      line.itemId,
-      line.productName,
-      line.itemName,
-      line.qty,
-      line.unitCost,
-      line.totalCost,
-    ]);
-    const firstLineRow = linesSheet.getLastRow() + 1;
-    linesSheet.getRange(firstLineRow, 1, lineRows.length, 9).setValues(lineRows);
+    const lineRows = normalizedLines.map(line => ({
+      'PL Number': number,
+      'SKU ID': line.skuId,
+      'Product Name': line.productName,
+      'Qty': line.qty,
+      'Unit Cost': line.unitCost,
+      'Total Cost': line.totalCost,
+      'Created By': email,
+      'Created At': createdAt,
+      'Line Number': line.lineNumber,
+      'Item ID': line.itemId,
+      'Item Name': line.itemName,
+    }));
+    appendPackingListRows(linesSheet, lineRows, PACKING_LIST_LINE_HEADERS);
   } catch (e) {
-    if (headerRow) headerSheet.getRange(headerRow, 1, 1, 14).clearContent();
+    if (headerRow) {
+      headerSheet.getRange(headerRow, 1, 1, headerSheet.getLastColumn()).clearContent();
+    }
     throw e;
   } finally {
     lock.releaseLock();
