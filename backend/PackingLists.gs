@@ -69,10 +69,17 @@ function getPackingLists() {
   const lineRows = sheetToObjects(SHEET.PACKING_LIST_LINES);
 
   const linesByNumber = {};
+  const legacyMetaByNumber = {};
   lineRows.forEach(row => {
     const number = String(row['PL Number'] || '').trim();
     if (!number) return;
     if (!linesByNumber[number]) linesByNumber[number] = [];
+    if (!legacyMetaByNumber[number]) {
+      legacyMetaByNumber[number] = {
+        createdBy: String(row['Created By'] || '').trim(),
+        createdAt: packingListTimestamp(row['Created At']),
+      };
+    }
     const fallbackLineNumber = linesByNumber[number].length + 1;
     const productName = String(row['Product Name'] || '').trim();
     linesByNumber[number].push({
@@ -91,7 +98,7 @@ function getPackingLists() {
     linesByNumber[number].sort((a, b) => a.lineNumber - b.lineNumber);
   });
 
-  return headers.filter(row => String(row['PL Number'] || '').trim()).map(row => {
+  const lists = headers.filter(row => String(row['PL Number'] || '').trim()).map(row => {
     const number = String(row['PL Number'] || '').trim();
     return {
       number,
@@ -111,6 +118,36 @@ function getPackingLists() {
       lines: linesByNumber[number] || [],
     };
   });
+
+  // The user's previous Packing Lists sheet may have been replaced while its
+  // PL Line Items were retained. Keep those groups visible without rewriting
+  // the sheet or inventing supplier data. They stay Draft until reconciled.
+  const headerNumbers = {};
+  lists.forEach(list => { headerNumbers[list.number] = true; });
+  Object.keys(linesByNumber).forEach(number => {
+    if (headerNumbers[number]) return;
+    const lines = linesByNumber[number];
+    const meta = legacyMetaByNumber[number] || {};
+    lists.push({
+      number,
+      date: packingListDate(meta.createdAt),
+      supplier: '',
+      status: 'Draft',
+      notes: 'Recovered from existing PL Line Items; supplier and Item IDs need review.',
+      totalLines: lines.length,
+      totalQty: lines.reduce((sum, line) => sum + line.qty, 0),
+      totalCost: lines.reduce((sum, line) => sum + line.totalCost, 0),
+      createdBy: meta.createdBy || '',
+      createdAt: meta.createdAt || '',
+      receivedBy: '',
+      receivedAt: '',
+      cancelledBy: '',
+      cancelledAt: '',
+      lines,
+    });
+  });
+
+  return lists;
 }
 
 function packingListDate(value) {
@@ -208,6 +245,8 @@ function createPackingList(body, email) {
 
   let headerRow = 0;
   try {
+    // getPackingLists includes both normal header rows and retained legacy
+    // detail groups, so a number cannot be reused while old line items exist.
     const existingNumbers = getPackingLists()
       .map(list => list.number)
       .filter(Boolean);

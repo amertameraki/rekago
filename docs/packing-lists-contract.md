@@ -80,6 +80,12 @@ rewritten or deleted. Historical rows without an Item ID remain readable but
 must be matched to an Item before a future receive-to-stock action can process
 them safely.
 
+If an existing line group has no corresponding row in `Packing Lists`, the API
+returns a non-destructive recovered view of that group. Its date and creator are
+inferred from `Created At` and `Created By`, totals are recalculated from its
+lines, supplier remains blank, and status is `Draft`. The packing-list number is
+also reserved so a new list cannot accidentally reuse it.
+
 ## Authenticated API contract
 
 All actions use the existing POST request format and include a Google `idToken`.
