@@ -14,7 +14,9 @@ not store a second editable copy of a movement.
 Each `REKAGO.stockIn` line produces one positive ledger movement. A Stock In
 reference that matches a Received Packing List is labelled **Packing List
 Receipt** and traces to Packing Lists. Other inbound references trace to Stock
-In.
+In. References must not be reused across unrelated source transactions; the
+seeded Initial Stock row therefore uses `OPEN-2026-001`, not a Packing List
+number.
 
 Each `REKAGO.stockOut` line produces one negative ledger movement and traces to
 Outbound. Multiple lines may share the same Outbound or Packing List reference;
