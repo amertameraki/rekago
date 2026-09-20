@@ -17,6 +17,7 @@
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <title>Rekago — Inventory, rekapped</title>
+<link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -60,6 +61,8 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 .language-note.show { opacity: 1; transform: translateY(0); }
 .language-note::before { content: ''; position: absolute; top: -6px; right: 82px; width: 10px; height: 10px; background: var(--surface); border-left: 1px solid var(--border); border-top: 1px solid var(--border); transform: rotate(45deg); }
 .demo-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: var(--warn); background: rgba(166,96,10,0.12); padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+.btn-reset-sandbox { background:none; border:1px solid rgba(242,187,22,0.28); border-radius:6px; color:rgba(242,187,22,0.72); font-size:11px; font-weight:600; padding:5px 10px; white-space:nowrap; }
+.btn-reset-sandbox:hover { border-color:var(--gold); color:var(--gold); }
 .btn-trylive { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 6px; transition: opacity 0.15s; text-decoration: none; white-space: nowrap; }
 .btn-trylive:hover { opacity: 0.88; }
 .live-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-weight: 600; }
@@ -268,6 +271,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="lang-btn" onclick="setLang('id')">ID</button>
       <button class="lang-btn" onclick="setLang('ko')">한국어</button>
       <div class="language-note" id="languageNote" role="status"></div>
+      <button class="btn-reset-sandbox" onclick="confirmSandboxReset()">Reset Sandbox</button>
       <span class="demo-badge" id="modeBadge">SANDBOX</span>
       <a class="btn-trylive" id="consultCta" href="https://amertameraki.com" target="_blank" rel="noopener noreferrer">Get Your Own Version</a>
     </div>
@@ -285,7 +289,7 @@ const REKAGO = {
   // The public build has one mode: an editable, browser-only Sandbox.
   // It contains no production endpoint, identity token, or business data.
   mode: 'sandbox', lang: 'en',
-  skus: [], items: [], stockIn: [], stockOut: [],
+  skus: [], items: [], stockIn: [], stockOut: [], packingLists: [],
 };
 
 // Seed data for sandbox mode — a copy of the same numbers already shown
@@ -305,6 +309,24 @@ const SANDBOX_SEED = {
     { 'SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Item Name':'Linen Napkin — Cream' },
     { 'SKU ID':'BLM-002','Item ID':'BLM-002-SND','Item Name':'Linen Napkin — Sand' },
     { 'SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Item Name':'Rattan + Napkin Gift Set' },
+  ],
+  packingLists: [
+    {
+      number:'PL-2026-001', date:'2026-05-20', supplier:'Supplier Rattan Jakarta',
+      status:'Received', notes:'Initial May restock',
+      lines:[
+        { sku:'BLM-001', itemId:'BLM-001-NAT', productName:'Rattan Placemat', itemName:'Rattan Placemat — Natural', qty:40, unitCost:22000 },
+        { sku:'BLM-001', itemId:'BLM-001-DRK', productName:'Rattan Placemat', itemName:'Rattan Placemat — Dark', qty:20, unitCost:22000 },
+      ],
+    },
+    {
+      number:'PL-2026-002', date:'2026-05-26', supplier:'Supplier Tekstil Bandung',
+      status:'In Transit', notes:'Napkin replenishment',
+      lines:[
+        { sku:'BLM-002', itemId:'BLM-002-CRM', productName:'Linen Napkin', itemName:'Linen Napkin — Cream', qty:35, unitCost:9000 },
+        { sku:'BLM-003', itemId:'BLM-003-GFT', productName:'Rattan + Napkin Set', itemName:'Rattan + Napkin Gift Set', qty:12, unitCost:52000 },
+      ],
+    },
   ],
   stockIn: [
     { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Supplier Name':'Supplier Rattan Jakarta','Qty In':40,'Unit Cost (IDR)':22000,'Total Cost (IDR)':880000,'Type':'Restock' },
@@ -463,8 +485,19 @@ function showLanguageNote(lang) {
 function resetSandboxState() {
   REKAGO.skus        = SANDBOX_SEED.skus.map(row => ({ ...row }));
   REKAGO.items       = SANDBOX_SEED.items.map(row => ({ ...row }));
+  REKAGO.packingLists = SANDBOX_SEED.packingLists.map(list => ({
+    ...list,
+    lines: list.lines.map(line => ({ ...line })),
+  }));
   REKAGO.stockIn     = SANDBOX_SEED.stockIn.map(row => ({ ...row }));
   REKAGO.stockOut    = SANDBOX_SEED.stockOut.map(row => ({ ...row }));
+}
+
+function confirmSandboxReset() {
+  const confirmed = window.confirm(
+    'Reset the Sandbox? All changes, imported data, and unfinished drafts in this browser session will be discarded.'
+  );
+  if (confirmed) window.location.reload();
 }
 
 // ============================================================

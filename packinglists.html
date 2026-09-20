@@ -1,11 +1,8 @@
 <!-- packinglists.html - browser-only inbound packing list workflow -->
 <main>
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px">
-    <div>
-      <div class="page-title" style="margin-bottom:2px">Packing Lists</div>
-      <div class="page-meta" id="plMeta">Supplier inbound shipments</div>
-    </div>
-    <button class="btn-secondary" id="plResetButton" onclick="plResetSampleData()">Reset sample data</button>
+  <div>
+    <div class="page-title" style="margin-bottom:2px">Packing Lists</div>
+    <div class="page-meta" id="plMeta">Supplier inbound shipments</div>
   </div>
 
   <div class="pl-metrics">
@@ -266,31 +263,6 @@
 </style>
 
 <script>
-const PL_SAMPLE = [
-  {
-    number: 'PL-2026-001',
-    date: '2026-05-20',
-    supplier: 'Supplier Rattan Jakarta',
-    status: 'Received',
-    notes: 'Initial May restock',
-    lines: [
-      { sku: 'BLM-001', itemId: 'BLM-001-NAT', productName: 'Rattan Placemat', itemName: 'Rattan Placemat — Natural', qty: 40, unitCost: 22000 },
-      { sku: 'BLM-001', itemId: 'BLM-001-DRK', productName: 'Rattan Placemat', itemName: 'Rattan Placemat — Dark', qty: 20, unitCost: 22000 },
-    ],
-  },
-  {
-    number: 'PL-2026-002',
-    date: '2026-05-26',
-    supplier: 'Supplier Tekstil Bandung',
-    status: 'In Transit',
-    notes: 'Napkin replenishment',
-    lines: [
-      { sku: 'BLM-002', itemId: 'BLM-002-CRM', productName: 'Linen Napkin', itemName: 'Linen Napkin — Cream', qty: 35, unitCost: 9000 },
-      { sku: 'BLM-003', itemId: 'BLM-003-GFT', productName: 'Rattan + Napkin Set', itemName: 'Rattan + Napkin Gift Set', qty: 12, unitCost: 52000 },
-    ],
-  },
-];
-
 let plLines = [];
 let plLists = [];
 let plStatusFilter = '';
@@ -299,7 +271,7 @@ async function init_packinglists() {
   document.getElementById('plDate').value = new Date().toISOString().slice(0, 10);
   plPopulateProducts();
   plRenderLines();
-  plLists = PL_SAMPLE.map(plNormalizeList);
+  plLists = REKAGO.packingLists;
   plRenderLists();
 }
 
@@ -446,7 +418,8 @@ async function plCreateList() {
     lines: plLines.map(line => ({ ...line })),
   };
 
-  plLists.unshift(packingList);
+  REKAGO.packingLists.unshift(packingList);
+  plLists = REKAGO.packingLists;
   plClearDraft();
   plRenderLists();
   showToast('Packing List created for this Sandbox session.');
@@ -459,14 +432,6 @@ function plClearDraft() {
   document.getElementById('plStatus').value = 'Draft';
   plLines = [];
   plRenderLines();
-}
-
-function plResetSampleData() {
-  plLines = [];
-  plLists = PL_SAMPLE.map(plNormalizeList);
-  plClearDraft();
-  plRenderLists();
-  showToast('Sample packing lists restored.');
 }
 
 function plRenderLists() {
@@ -522,18 +487,92 @@ function plRenderMetrics() {
   document.getElementById('plMeta').textContent = `${plLists.length} packing lists tracked`;
 }
 
-async function plReceive(number) {
-  const list = plLists.find(pl => pl.number === number);
-  if (!list) return;
-  list.status = 'Received';
+function plReceive(number) {
+  const list = REKAGO.packingLists.find(pl => pl.number === number);
+  if (!list) { showToast('Packing List not found.', true); return; }
+  if (!['Draft', 'In Transit'].includes(list.status)) {
+    showToast(`${number} cannot be received from status ${list.status}.`, true);
+    return;
+  }
+  if (!list.lines.length) { showToast(`${number} has no lines to receive.`, true); return; }
+  if (REKAGO.stockIn.some(row => String(row['Reference ID'] || '').trim() === number)) {
+    showToast(`Stock In already contains ${number}; nothing was changed.`, true);
+    return;
+  }
+
+  const productsBySku = new Map(REKAGO.skus.map(sku => [String(sku['SKU ID']), sku]));
+  const itemsById = new Map(REKAGO.items.map(item => [String(item['Item ID']), item]));
+  const qtyBySku = {};
+
+  for (let index = 0; index < list.lines.length; index++) {
+    const line = list.lines[index];
+    const label = `Line ${index + 1}`;
+    const sku = productsBySku.get(line.sku);
+    const item = itemsById.get(line.itemId);
+    if (!sku) { showToast(`${label}: SKU ${line.sku} does not exist.`, true); return; }
+    if (!item) { showToast(`${label}: Item ${line.itemId} does not exist.`, true); return; }
+    if (String(item['SKU ID']) !== line.sku) {
+      showToast(`${label}: Item ${line.itemId} does not belong to ${line.sku}.`, true);
+      return;
+    }
+    if (!Number.isInteger(line.qty) || line.qty < 1) {
+      showToast(`${label}: quantity must be a positive whole number.`, true);
+      return;
+    }
+    if (!Number.isFinite(line.unitCost) || line.unitCost < 0) {
+      showToast(`${label}: unit cost is invalid.`, true);
+      return;
+    }
+    qtyBySku[line.sku] = (qtyBySku[line.sku] || 0) + line.qty;
+  }
+
+  const totalQty = Object.values(qtyBySku).reduce((sum, qty) => sum + qty, 0);
+  if (!window.confirm(`Receive ${number} into Stock In? This will add ${totalQty} units to physical stock.`)) return;
+
+  const receiptDate = new Date().toISOString().slice(0, 10);
+  const stockRows = list.lines.map(line => ({
+    Date: receiptDate,
+    'Reference ID': number,
+    'SKU ID': line.sku,
+    'Item ID': line.itemId,
+    'Supplier Name': list.supplier || '',
+    'Qty In': line.qty,
+    'Unit Cost (IDR)': line.unitCost,
+    'Total Cost (IDR)': line.qty * line.unitCost,
+    Type: 'Restock',
+    Notes: `Received from Packing List ${number}`,
+  }));
+  const nextSkus = REKAGO.skus.map(sku => ({ ...sku }));
+  Object.entries(qtyBySku).forEach(([skuId, qty]) => {
+    const sku = nextSkus.find(row => row['SKU ID'] === skuId);
+    const newStock = (Number(sku['Current Stock']) || 0) + qty;
+    const reorder = Number(sku['Reorder Threshold']) || 0;
+    sku['Current Stock'] = newStock;
+    sku['SKU Status'] = newStock === 0 ? 'Out of Stock' : newStock <= reorder ? 'Low Stock' : 'In Stock';
+  });
+  const nextPackingLists = REKAGO.packingLists.map(pl => pl.number === number
+    ? { ...pl, status: 'Received', receivedAt: new Date().toISOString() }
+    : pl
+  );
+
+  // Commit the staged data only after every line and derived stock value pass.
+  REKAGO.stockIn = stockRows.concat(REKAGO.stockIn);
+  REKAGO.skus = nextSkus;
+  REKAGO.packingLists = nextPackingLists;
+  plLists = REKAGO.packingLists;
   plRenderLists();
-  showToast(`${number} marked as received.`);
+  showToast(`${number} received: ${totalQty} units added to physical stock.`);
 }
 
-async function plCancel(number) {
-  const list = plLists.find(pl => pl.number === number);
-  if (!list) return;
+function plCancel(number) {
+  const list = REKAGO.packingLists.find(pl => pl.number === number);
+  if (!list) { showToast('Packing List not found.', true); return; }
+  if (!['Draft', 'In Transit'].includes(list.status)) {
+    showToast(`${number} cannot be cancelled from status ${list.status}.`, true);
+    return;
+  }
   list.status = 'Cancelled';
+  plLists = REKAGO.packingLists;
   plRenderLists();
   showToast(`${number} cancelled.`);
 }

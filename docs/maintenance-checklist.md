@@ -14,6 +14,11 @@ The public runtime is browser-only. Before every public Preview deployment:
       within the current session.
 - [ ] One outbound number can contain lines from different channels/orders;
       invalid or insufficient-stock batches make no stock changes.
+- [ ] Receiving an open Packing List creates one Stock In row per line,
+      increases each SKU by the aggregate quantity exactly once, and survives
+      page navigation.
+- [ ] Reset Sandbox cancellation preserves the session; confirmation reloads
+      Dashboard and restores every original dataset and unfinished draft.
 - [ ] Browser network logs contain no request to Google Apps Script, Google
       Identity, a production API, or a customer data source.
 - [ ] The frontend contains no deployed endpoint, OAuth client ID, identity

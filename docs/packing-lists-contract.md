@@ -9,6 +9,21 @@ This document describes the behavior and compatibility rules that maintainers
 must preserve when changing Packing Lists or receive-to-stock. For the release
 procedure and regression checks, see [maintenance-checklist.md](maintenance-checklist.md).
 
+## Public Sandbox behavior
+
+The public Sandbox keeps Packing Lists in shared `REKAGO.packingLists` state so
+created and updated lists survive page navigation for the current session.
+Receiving an open list validates every line first, creates one in-memory Stock
+In row per line, aggregates the stock increase per SKU, recalculates SKU status,
+and then marks the list Received. A Received/Cancelled status or an existing
+Stock In reference prevents another receipt. The operation commits only after
+all validation passes.
+
+Packing Lists do not have an independent sample reset because that could reset
+workflow status without reversing inventory. The global **Reset Sandbox**
+control reloads and restores Packing Lists, Stock In, SKU stock, Outbound data,
+imports, filters, and drafts together.
+
 ## Implemented scope
 
 The current Packing List release supports:
@@ -272,6 +287,8 @@ These rules are safety requirements, not incidental implementation details:
 - If a receive write fails, new Stock In values, SKU stock/status, and Packing
   List receipt fields are restored to their prior state.
 - `Received` and `Cancelled` are terminal states.
+- In the public Sandbox, navigation must not re-seed Packing Lists; only a full
+  Sandbox reset may restore the original list and inventory state together.
 
 ## Validation and expected errors
 

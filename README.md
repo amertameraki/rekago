@@ -14,6 +14,8 @@ The public Sandbox has one operating mode:
 - It starts immediately without sign-in.
 - All changes exist only in the current browser session.
 - Refreshing the page restores the fixed sample data.
+- The global **Reset Sandbox** control confirms, then restores every sample
+  dataset and unfinished draft together.
 - There is no Apps Script URL, OAuth client ID, identity token, or production
   configuration in the frontend.
 - The browser Content Security Policy permits network requests only to the
@@ -39,7 +41,9 @@ is a separate HTML fragment loaded into `#page-frame`:
 | `stockout.html` | Multi-line outbound transactions with optional channel and order references |
 
 Shared state is held in `REKAGO` inside `index.html`. Product and stock changes
-are cross-linked during the session. No browser action calls `backend/`.
+are cross-linked during the session. Packing List receipt creates matching
+Stock In rows and increases physical stock exactly once. No browser action
+calls `backend/`.
 
 ## Run locally
 
