@@ -435,8 +435,10 @@ const SHARED_CSS = `<style>
 // ============================================================
 const PAGE_CACHE = {};
 const PAGE_SCRIPTS_LOADED = {};
+let pageLoadSequence = 0;
 
 async function loadPage(name) {
+  const loadSequence = ++pageLoadSequence;
   // Update nav active state
   if (typeof event !== 'undefined' && event && event.currentTarget) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -450,10 +452,12 @@ async function loadPage(name) {
     const res        = await fetch(name + '.html');
     PAGE_CACHE[name] = await res.text();
   }
+  if (loadSequence !== pageLoadSequence) return;
   const frame = document.getElementById('page-frame');
   frame.innerHTML = PAGE_CACHE[name];
   if (!PAGE_SCRIPTS_LOADED[name]) {
     for (const oldScript of frame.querySelectorAll('script')) {
+      if (loadSequence !== pageLoadSequence) return;
       const script = document.createElement('script');
       [...oldScript.attributes].forEach(attr => script.setAttribute(attr.name, attr.value));
       script.textContent = oldScript.textContent;
@@ -467,9 +471,11 @@ async function loadPage(name) {
         : Promise.resolve();
       oldScript.replaceWith(script);
       await loaded;
+      if (loadSequence !== pageLoadSequence) return;
     }
     PAGE_SCRIPTS_LOADED[name] = true;
   }
+  if (loadSequence !== pageLoadSequence) return;
   if (typeof window['init_' + name] === 'function') window['init_' + name]();
 }
 
