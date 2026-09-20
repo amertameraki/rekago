@@ -68,7 +68,7 @@ A richer, read-only catalog view — grid or table layout, with brand/classifica
 - A form to build a new packing list: header details (PL number, date, supplier, status — Draft / In Transit / Received / Cancelled, notes) plus line items (pick a SKU, quantity, unit cost) with running totals
 - A table of all packing lists with a "Receive" action to mark one as arrived
 
-On the `preview` branch, an authorized Live session reads and creates packing lists through the Apps Script backend. Demo and Sandbox sessions remain browser-only. Full-list receiving is implemented but kept behind `PACKING_LIST_RECEIVE_ENABLED` until the matching Apps Script version passes deployment verification.
+On the `preview` branch, an authorized Live session reads, creates, and fully receives packing lists through the Apps Script backend. Receiving writes Stock In records and updates SKU stock; recovered legacy groups remain blocked until every line has a valid Item ID. Demo and Sandbox sessions remain browser-only.
 
 ### Stock In (`stockin.html`)
 Records inbound stock (restock, initial stock, or a return). Picking a SKU populates the Item dropdown. Submitting increases that SKU's `Current Stock` and recalculates its status (In Stock / Low Stock / Out of Stock) against its reorder threshold — both the real backend (`StockCalc.gs`) and Sandbox mode (`applySandboxStockDelta()` in `index.html`) do this exact same calculation.
