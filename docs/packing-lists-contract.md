@@ -175,6 +175,39 @@ Successful response:
 
 The backend looks up product and item names from the existing sheets. The client does not submit trusted names or calculated totals.
 
+### `receivePackingList`
+
+Request:
+
+```json
+{
+  "action": "receivePackingList",
+  "idToken": "<google-id-token>",
+  "number": "PL-2026-005"
+}
+```
+
+Successful response:
+
+```json
+{
+  "ok": true,
+  "message": "Packing List received.",
+  "number": "PL-2026-005",
+  "totalQty": 20
+}
+```
+
+Receiving writes one Stock In row per packing-list line, aggregates quantities
+per SKU before updating stock, and then marks the packing-list header as
+`Received` with the verified user and timestamp. Validation completes before
+any stock mutation. The operation is protected by a script lock and rolls back
+new Stock In values, SKU stock/status, and header status if a write fails.
+
+Recovered legacy groups cannot be received until they have a real header and
+every line is matched to a valid Item ID. A packing-list number already present
+in Stock In is rejected to prevent a retry from double-counting inventory.
+
 ## Validation and expected errors
 
 | Condition | Expected code |
@@ -185,6 +218,8 @@ The backend looks up product and item names from the existing sheets. The client
 | SKU or Item does not exist, or Item does not belong to SKU | 400 |
 | Packing-list number already exists | 409 |
 | Backend lock cannot be acquired | 503 |
+| Packing list already received, cancelled, or already represented in Stock In | 409 |
+| Missing/mismatched Item ID on a receiving line | 409 |
 
 ## Safe rollout
 

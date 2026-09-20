@@ -60,6 +60,12 @@ function appendPackingListRows(sheet, rows, requiredHeaders) {
   return firstRow;
 }
 
+function packingListColumn(headers, name) {
+  const index = headers.indexOf(name);
+  if (index < 0) throw new Error('Missing sheet header: ' + name);
+  return index + 1;
+}
+
 /**
  * Returns packing-list headers with their line items nested under `lines`.
  * This function is exposed only through authenticated doPost routing.
@@ -303,4 +309,177 @@ function createPackingList(body, email) {
   );
 
   return ok({ message: 'Packing List created.', number });
+}
+
+/**
+ * Receives a complete packing list in one operation. Every line becomes one
+ * Stock In row, SKU stock is increased by the aggregated line quantity, and
+ * the packing-list header is marked Received. A retained legacy line group
+ * without a real header or Item IDs must be reconciled before it can receive.
+ */
+function receivePackingList(body, email) {
+  const number = String(body.number || '').trim();
+  if (!number) return err('number is required.', 400);
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return err('Server is busy, please try again.', 503);
+
+  try {
+    const list = getPackingLists().find(entry => entry.number === number);
+    if (!list) return err('Packing List not found: ' + number, 404);
+
+    const headerSheet = getPackingListsSheet();
+    const headers = ensurePackingListHeaders(headerSheet, PACKING_LIST_HEADERS);
+    const headerData = headerSheet.getDataRange().getValues();
+    const numberColumn = packingListColumn(headers, 'PL Number');
+    let headerRow = 0;
+    for (let rowIndex = 1; rowIndex < headerData.length; rowIndex++) {
+      if (String(headerData[rowIndex][numberColumn - 1] || '').trim() === number) {
+        headerRow = rowIndex + 1;
+        break;
+      }
+    }
+    if (!headerRow) {
+      return err('This recovered Packing List needs a header and Item IDs before receiving.', 409);
+    }
+
+    const statusColumn = packingListColumn(headers, 'Status');
+    const receivedByColumn = packingListColumn(headers, 'Received By');
+    const receivedAtColumn = packingListColumn(headers, 'Received At');
+    const status = String(headerData[headerRow - 1][statusColumn - 1] || '').trim();
+    if (status === 'Received') return err('Packing List is already received: ' + number, 409);
+    if (status === 'Cancelled') return err('Cancelled Packing Lists cannot be received.', 409);
+    if (!['Draft', 'In Transit'].includes(status)) {
+      return err('Packing List must be Draft or In Transit before receiving.', 409);
+    }
+    if (!list.lines.length) return err('Packing List has no line items.', 409);
+
+    const productsBySku = {};
+    getProducts().forEach(product => {
+      const skuId = String(product['SKU ID'] || '').trim();
+      if (skuId) productsBySku[skuId] = product;
+    });
+    const itemsById = {};
+    getItems().forEach(item => {
+      const itemId = String(item['Item ID'] || '').trim();
+      if (itemId) itemsById[itemId] = item;
+    });
+
+    for (let index = 0; index < list.lines.length; index++) {
+      const line = list.lines[index];
+      const label = 'Line ' + (index + 1);
+      if (!line.skuId || !productsBySku[line.skuId]) {
+        return err(label + ': SKU not found: ' + (line.skuId || '(blank)'), 409);
+      }
+      if (!line.itemId || !itemsById[line.itemId]) {
+        return err(label + ': Item ID must be matched before receiving.', 409);
+      }
+      if (String(itemsById[line.itemId]['SKU ID'] || '').trim() !== line.skuId) {
+        return err(label + ': Item does not belong to SKU ' + line.skuId + '.', 409);
+      }
+      if (!Number.isInteger(line.qty) || line.qty < 1) {
+        return err(label + ': qty must be a positive whole number.', 409);
+      }
+      if (!Number.isFinite(line.unitCost) || line.unitCost < 0) {
+        return err(label + ': unit cost is invalid.', 409);
+      }
+    }
+
+    const stockInSheet = getStockInSheet();
+    const existingStockIn = sheetToObjects(SHEET.STOCK_IN).some(row =>
+      String(row['Reference ID'] || '').trim() === number
+    );
+    if (existingStockIn) {
+      return err('Stock In already contains records for ' + number + '; review before retrying.', 409);
+    }
+
+    const skuSheet = getSkusSheet();
+    const skuData = skuSheet.getDataRange().getValues();
+    const skuSnapshots = {};
+    const qtyBySku = {};
+    list.lines.forEach(line => {
+      qtyBySku[line.skuId] = (qtyBySku[line.skuId] || 0) + line.qty;
+    });
+    Object.keys(qtyBySku).forEach(skuId => {
+      let row = 0;
+      for (let rowIndex = 1; rowIndex < skuData.length; rowIndex++) {
+        if (String(skuData[rowIndex][COL.SKUS.SKU_ID - 1] || '').trim() === skuId) {
+          row = rowIndex + 1;
+          break;
+        }
+      }
+      if (!row) throw new Error('SKU row not found: ' + skuId);
+      skuSnapshots[skuId] = {
+        row,
+        stock: Number(skuData[row - 1][COL.SKUS.STOCK - 1]) || 0,
+        status: skuData[row - 1][COL.SKUS.STATUS - 1],
+        reorder: Number(skuData[row - 1][COL.SKUS.REORDER - 1]) || 0,
+      };
+    });
+
+    const receivedAt = nowIso();
+    const stockRows = list.lines.map(line => {
+      const product = productsBySku[line.skuId];
+      return [
+        todayDate(), number, line.skuId, line.itemId,
+        String(product['SKU Name'] || line.productName || '').trim(),
+        String(product['Category'] || '').trim(), list.supplier || '',
+        line.qty, line.unitCost, line.qty * line.unitCost,
+        'Restock', 'Received from Packing List ' + number, email,
+      ];
+    });
+    const firstStockRow = stockInSheet.getLastRow() + 1;
+    const previousHeader = {
+      status: headerData[headerRow - 1][statusColumn - 1],
+      receivedBy: headerData[headerRow - 1][receivedByColumn - 1],
+      receivedAt: headerData[headerRow - 1][receivedAtColumn - 1],
+    };
+    let stockWriteStarted = false;
+    let headerWriteStarted = false;
+
+    try {
+      stockWriteStarted = true;
+      stockInSheet.getRange(firstStockRow, 1, stockRows.length, 13).setValues(stockRows);
+
+      Object.keys(qtyBySku).forEach(skuId => {
+        const snapshot = skuSnapshots[skuId];
+        const newStock = snapshot.stock + qtyBySku[skuId];
+        const newStatus = newStock <= snapshot.reorder ? 'Low Stock' : 'In Stock';
+        skuSheet.getRange(snapshot.row, COL.SKUS.STOCK, 1, 2)
+          .setValues([[newStock, newStatus]]);
+      });
+
+      headerWriteStarted = true;
+      headerSheet.getRange(headerRow, statusColumn).setValue('Received');
+      headerSheet.getRange(headerRow, receivedByColumn).setValue(email);
+      headerSheet.getRange(headerRow, receivedAtColumn).setValue(receivedAt);
+      SpreadsheetApp.flush();
+    } catch (e) {
+      if (stockWriteStarted) {
+        stockInSheet.getRange(firstStockRow, 1, stockRows.length, 13).clearContent();
+      }
+      Object.keys(skuSnapshots).forEach(skuId => {
+        const snapshot = skuSnapshots[skuId];
+        skuSheet.getRange(snapshot.row, COL.SKUS.STOCK, 1, 2)
+          .setValues([[snapshot.stock, snapshot.status]]);
+      });
+      if (headerWriteStarted) {
+        headerSheet.getRange(headerRow, statusColumn).setValue(previousHeader.status);
+        headerSheet.getRange(headerRow, receivedByColumn).setValue(previousHeader.receivedBy);
+        headerSheet.getRange(headerRow, receivedAtColumn).setValue(previousHeader.receivedAt);
+      }
+      throw e;
+    }
+
+    const totalQty = list.lines.reduce((sum, line) => sum + line.qty, 0);
+    logActivity(
+      'RECEIVE_PACKING_LIST',
+      'Packing List received: ' + number + ' (' + totalQty + ' units)',
+      number,
+      email
+    );
+    return ok({ message: 'Packing List received.', number, totalQty });
+  } finally {
+    lock.releaseLock();
+  }
 }

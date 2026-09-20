@@ -555,8 +555,11 @@ function plRenderLists() {
     ? filtered.map(pl => {
         const totalQty = pl.lines.reduce((sum, line) => sum + line.qty, 0);
         const totalCost = pl.lines.reduce((sum, line) => sum + (line.qty * line.unitCost), 0);
+        const needsItemIds = pl.lines.some(line => !line.itemId);
         const receiveButton = pl.status === 'Received' || pl.status === 'Cancelled'
           ? ''
+          : plUsesLiveBackend() && needsItemIds
+            ? '<button class="btn-receive" disabled title="Match Item IDs before receiving">Needs Item IDs</button>'
           // Passed via data-* + this.dataset, not interpolated into a quoted
           // JS string literal inside onclick — the browser HTML-decodes
           // attribute values *before* an inline handler is parsed as JS, so
@@ -591,9 +594,31 @@ function plRenderMetrics() {
   document.getElementById('plMeta').textContent = `${plLists.length} packing lists tracked`;
 }
 
-function plReceive(number) {
+async function plReceive(number) {
   if (REKAGO.mode === 'live') {
-    showToast('Live receiving needs the Apps Script packing list endpoint next.', true);
+    if (!PACKING_LIST_RECEIVE_ENABLED) {
+      showToast('Live receiving is staged until the new backend is deployed.', true);
+      return;
+    }
+    const list = plLists.find(pl => pl.number === number);
+    if (!list) return;
+    if (list.lines.some(line => !line.itemId)) {
+      showToast('Match every line to an Item ID before receiving.', true);
+      return;
+    }
+    if (!window.confirm(`Receive ${number} into Stock In? This will increase SKU stock.`)) return;
+    try {
+      const response = await apiPost('receivePackingList', { number });
+      if (!response.ok) {
+        showToast(response.error || 'Could not receive Packing List.', true);
+        return;
+      }
+      await Promise.all([plLoadLiveLists(), loadAllData()]);
+      plRenderLists();
+      showToast(`${number} received into stock.`);
+    } catch (e) {
+      showToast('Could not receive Packing List. Check your connection.', true);
+    }
     return;
   }
   const list = plLists.find(pl => pl.number === number);
