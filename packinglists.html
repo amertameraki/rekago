@@ -244,6 +244,16 @@
   font-weight: 700;
   padding: 4px 10px;
 }
+.pl-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.btn-cancel {
+  background: rgba(192,57,43,0.06);
+  border: 1px solid rgba(192,57,43,0.16);
+  border-radius: 5px;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+}
 @media (max-width: 900px) {
   .pl-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pl-line-form { grid-template-columns: 1fr; }
@@ -341,6 +351,7 @@ function plNormalizeList(row) {
     supplier: String(row.supplier ?? row['Supplier Name'] ?? row.Supplier ?? '').trim(),
     status: String(row.status ?? row.Status ?? 'Draft').trim(),
     notes: String(row.notes ?? row.Notes ?? '').trim(),
+    recovered: Boolean(row.recovered),
     lines: (row.lines || row.items || []).map(plNormalizeLine).filter(line => line.sku),
   };
 }
@@ -555,17 +566,21 @@ function plRenderLists() {
     ? filtered.map(pl => {
         const totalQty = pl.lines.reduce((sum, line) => sum + line.qty, 0);
         const totalCost = pl.lines.reduce((sum, line) => sum + (line.qty * line.unitCost), 0);
+        const terminal = pl.status === 'Received' || pl.status === 'Cancelled';
         const needsItemIds = pl.lines.some(line => !line.itemId);
-        const receiveButton = pl.status === 'Received' || pl.status === 'Cancelled'
-          ? ''
-          : plUsesLiveBackend() && needsItemIds
-            ? '<button class="btn-receive" disabled title="Match Item IDs before receiving">Needs Item IDs</button>'
+        const receiveButton = plUsesLiveBackend() && needsItemIds
+          ? '<button class="btn-receive" disabled title="Match Item IDs before receiving">Needs Item IDs</button>'
           // Passed via data-* + this.dataset, not interpolated into a quoted
           // JS string literal inside onclick — the browser HTML-decodes
           // attribute values *before* an inline handler is parsed as JS, so
           // HTML-escaping pl.number here would not stop it from breaking out
           // of a 'single-quoted' onclick="plReceive('...')" string.
           : `<button class="btn-receive" data-pl-number="${plEscape(pl.number)}" onclick="plReceive(this.dataset.plNumber)">Receive</button>`;
+        const actionButtons = terminal
+          ? ''
+          : pl.recovered
+            ? '<button class="btn-cancel" disabled title="Create a Packing Lists header first">Needs Header</button>'
+            : `<div class="pl-row-actions">${receiveButton}<button class="btn-cancel" data-pl-number="${plEscape(pl.number)}" onclick="plCancel(this.dataset.plNumber)">Cancel</button></div>`;
         return `<tr>
           <td><span class="mono">${plEscape(pl.number)}</span></td>
           <td>${plEscape(pl.date)}</td>
@@ -574,7 +589,7 @@ function plRenderLists() {
           <td>${totalQty.toLocaleString('id-ID')}</td>
           <td>${formatRp(totalCost)}</td>
           <td>${statusPill(pl.status)}</td>
-          <td style="text-align:right">${receiveButton}</td>
+          <td style="text-align:right">${actionButtons}</td>
         </tr>`;
       }).join('')
     : '<tr class="empty-row"><td colspan="8">No packing lists found</td></tr>';
@@ -627,6 +642,39 @@ async function plReceive(number) {
   plSaveLists();
   plRenderLists();
   showToast(`${number} marked as received.`);
+}
+
+async function plCancel(number) {
+  const list = plLists.find(pl => pl.number === number);
+  if (!list) return;
+  if (REKAGO.mode === 'live') {
+    if (!PACKING_LIST_CANCEL_ENABLED) {
+      showToast('Live cancellation is staged until the new backend is deployed.', true);
+      return;
+    }
+    if (list.recovered) {
+      showToast('Recovered Packing Lists need a real header before cancellation.', true);
+      return;
+    }
+    if (!window.confirm(`Cancel ${number}? This cannot be undone.`)) return;
+    try {
+      const response = await apiPost('cancelPackingList', { number });
+      if (!response.ok) {
+        showToast(response.error || 'Could not cancel Packing List.', true);
+        return;
+      }
+      await plLoadLiveLists();
+      plRenderLists();
+      showToast(`${number} cancelled.`);
+    } catch (e) {
+      showToast('Could not cancel Packing List. Check your connection.', true);
+    }
+    return;
+  }
+  list.status = 'Cancelled';
+  plSaveLists();
+  plRenderLists();
+  showToast(`${number} cancelled.`);
 }
 
 function plSetStatusFilter(status, btn) {

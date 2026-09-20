@@ -121,6 +121,7 @@ function getPackingLists() {
       receivedAt: packingListTimestamp(row['Received At']),
       cancelledBy: String(row['Cancelled By'] || '').trim(),
       cancelledAt: packingListTimestamp(row['Cancelled At']),
+      recovered: false,
       lines: linesByNumber[number] || [],
     };
   });
@@ -149,6 +150,7 @@ function getPackingLists() {
       receivedAt: '',
       cancelledBy: '',
       cancelledAt: '',
+      recovered: true,
       lines,
     });
   });
@@ -479,6 +481,81 @@ function receivePackingList(body, email) {
       email
     );
     return ok({ message: 'Packing List received.', number, totalQty });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Cancels a Draft or In Transit packing list without changing inventory.
+ * Received lists and recovered legacy groups cannot be cancelled.
+ */
+function cancelPackingList(body, email) {
+  const number = String(body.number || '').trim();
+  if (!number) return err('number is required.', 400);
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return err('Server is busy, please try again.', 503);
+
+  try {
+    const headerSheet = getPackingListsSheet();
+    const headers = ensurePackingListHeaders(headerSheet, PACKING_LIST_HEADERS);
+    const data = headerSheet.getDataRange().getValues();
+    const numberColumn = packingListColumn(headers, 'PL Number');
+    const statusColumn = packingListColumn(headers, 'Status');
+    const cancelledByColumn = packingListColumn(headers, 'Cancelled By');
+    const cancelledAtColumn = packingListColumn(headers, 'Cancelled At');
+
+    let headerRow = 0;
+    for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+      if (String(data[rowIndex][numberColumn - 1] || '').trim() === number) {
+        headerRow = rowIndex + 1;
+        break;
+      }
+    }
+    if (!headerRow) {
+      const recoveredExists = getPackingLists().some(list => list.number === number && list.recovered);
+      if (recoveredExists) {
+        return err('Recovered Packing Lists need a real header before cancellation.', 409);
+      }
+      return err('Packing List not found: ' + number, 404);
+    }
+
+    const status = String(data[headerRow - 1][statusColumn - 1] || '').trim();
+    if (status === 'Cancelled') return err('Packing List is already cancelled: ' + number, 409);
+    if (status === 'Received') return err('Received Packing Lists cannot be cancelled.', 409);
+    if (!['Draft', 'In Transit'].includes(status)) {
+      return err('Packing List must be Draft or In Transit before cancellation.', 409);
+    }
+
+    const previous = {
+      status: data[headerRow - 1][statusColumn - 1],
+      cancelledBy: data[headerRow - 1][cancelledByColumn - 1],
+      cancelledAt: data[headerRow - 1][cancelledAtColumn - 1],
+    };
+    let writeStarted = false;
+    try {
+      writeStarted = true;
+      headerSheet.getRange(headerRow, statusColumn).setValue('Cancelled');
+      headerSheet.getRange(headerRow, cancelledByColumn).setValue(email);
+      headerSheet.getRange(headerRow, cancelledAtColumn).setValue(nowIso());
+      SpreadsheetApp.flush();
+    } catch (e) {
+      if (writeStarted) {
+        headerSheet.getRange(headerRow, statusColumn).setValue(previous.status);
+        headerSheet.getRange(headerRow, cancelledByColumn).setValue(previous.cancelledBy);
+        headerSheet.getRange(headerRow, cancelledAtColumn).setValue(previous.cancelledAt);
+      }
+      throw e;
+    }
+
+    logActivity(
+      'CANCEL_PACKING_LIST',
+      'Packing List cancelled: ' + number,
+      number,
+      email
+    );
+    return ok({ message: 'Packing List cancelled.', number });
   } finally {
     lock.releaseLock();
   }

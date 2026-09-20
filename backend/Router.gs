@@ -65,6 +65,7 @@ function doPost(e) {
       case 'createSO':         return createSO(body, email);
       case 'createPackingList': return createPackingList(body, email);
       case 'receivePackingList': return receivePackingList(body, email);
+      case 'cancelPackingList': return cancelPackingList(body, email);
       case 'updateItemStatus': return updateItemStatus(body, email);
 
       default: return err('Unknown action: ' + action, 404);

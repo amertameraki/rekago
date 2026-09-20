@@ -208,6 +208,23 @@ Recovered legacy groups cannot be received until they have a real header and
 every line is matched to a valid Item ID. A packing-list number already present
 in Stock In is rejected to prevent a retry from double-counting inventory.
 
+### `cancelPackingList`
+
+Request:
+
+```json
+{
+  "action": "cancelPackingList",
+  "idToken": "<google-id-token>",
+  "number": "PL-2026-005"
+}
+```
+
+Cancellation is allowed only from `Draft` or `In Transit`. It updates the
+header to `Cancelled` with the verified user and timestamp and does not create
+Stock In rows or change SKU stock. `Received`, already-cancelled, and recovered
+headerless groups are rejected. Header writes are restored if a write fails.
+
 ## Validation and expected errors
 
 | Condition | Expected code |
@@ -220,6 +237,7 @@ in Stock In is rejected to prevent a retry from double-counting inventory.
 | Backend lock cannot be acquired | 503 |
 | Packing list already received, cancelled, or already represented in Stock In | 409 |
 | Missing/mismatched Item ID on a receiving line | 409 |
+| Packing list already received/cancelled or recovered without a header | 409 |
 
 ## Safe rollout
 
