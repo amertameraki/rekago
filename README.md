@@ -1,6 +1,9 @@
 # Rekago — Inventory, rekapped
 
-Rekago is a lightweight inventory management app for a small business (Studio Tools · Amerta Meraki Digital Atelier). It's a static, no-build frontend (plain HTML/CSS/JS, no framework) backed by a Google Apps Script Web App that reads and writes a Google Sheet.
+Rekago is lightweight, web-based inventory management software for a small
+business (Studio Tools · Amerta Meraki Digital Atelier). It has a static,
+no-build frontend (plain HTML/CSS/JS, no framework) backed by a Google Apps
+Script Web App that reads and writes a Google Sheet.
 
 Live site: **rekago.amertameraki.com** (served from the `main` branch via GitHub Pages)
 
@@ -14,7 +17,11 @@ Browser (static site)  ──fetch──▶  Google Apps Script Web App  ──�
 ```
 
 - **Frontend**: `index.html` is the app shell — nav, splash screen, onboarding tour, the "Try Demo" modal, and all shared state/logic. Every tab (`dashboard.html`, `products.html`, etc.) is a separate file containing just that page's `<main>` markup, its own `<style>`, and its own `<script>`. `index.html`'s `loadPage(name)` fetches a tab's HTML on first visit, injects it into `#page-frame`, executes its `<script>`, and calls that page's `init_<name>()` function.
-- **Backend**: a Google Apps Script project (not in this repo — lives in Apps Script's own editor, mirrored locally at `/Users/amifraise/Mac/Developers/RekaGo/GS & HTML/` for reference). `doGet` serves a couple of public, read-only endpoints; `doPost` handles everything else and requires a **Google Sign-In ID token**, which it verifies server-side before touching the Sheet.
+- **Backend**: the version-controlled Google Apps Script source is in
+  `backend/`. The deployed copy lives in Apps Script and must be updated as a
+  separate deployment. `doGet` serves limited public, read-only endpoints;
+  `doPost` handles private reads and writes and requires a **Google Sign-In ID
+  token**, which it verifies server-side before touching the Sheet.
 - **Config**: `config.js` holds the Apps Script Web App URL and the Google OAuth Client ID. Both are safe to be public — see the comment at the top of that file for why.
 
 ---
@@ -103,8 +110,23 @@ Create a sales order: header fields (SO number, date, channel, customer ref, sta
 
 ## Deploying changes
 
-- **Frontend**: this repo. Work happens on the `preview` branch; GitHub Pages only serves `main`, so nothing goes live until `preview` is merged into `main` and pushed.
-- **Backend**: not in this repo. Edit the files under `/Users/amifraise/Mac/Developers/RekaGo/GS & HTML/` locally, paste the changed ones into the Apps Script editor, then **Deploy → Manage deployments → Edit → New version → Deploy** — saving alone does not update the live endpoint.
+- **Preview first**: development work is pushed to the `preview` branch and
+  verified against the Preview frontend, Preview Apps Script deployment, and
+  staging Sheet before Production promotion.
+- **Frontend**: the HTML/CSS/JS in this repository is deployed by the configured
+  frontend host. Production must use a reviewed commit from `main`; do not
+  promote an untested Preview build.
+- **Backend**: copy the reviewed files from `backend/` into the matching Apps
+  Script project, then use **Deploy → Manage deployments → Edit → New version
+  → Deploy**. Saving alone does not update the Web App endpoint.
+- **Version pairing**: record the frontend commit and Apps Script deployment
+  version that passed QA together. A frontend feature must not be enabled until
+  its backend version is available in the same environment.
+
+See [`backend/README.md`](backend/README.md) for the backend file map and
+deployment process, and
+[`docs/maintenance-checklist.md`](docs/maintenance-checklist.md) for release
+checks.
 
 ---
 
@@ -114,6 +136,9 @@ Create a sales order: header fields (SO number, date, channel, customer ref, sta
 |---|---|
 | `index.html` | App shell: nav, splash, tour, Try Demo modal, shared state/helpers, `loadPage()` router |
 | `config.js` | Apps Script URL + Google OAuth Client ID (committed, not secret — see file comment) |
+| `backend/*.gs` | Version-controlled Google Apps Script backend source |
+| `docs/packing-lists-contract.md` | Packing List behavior, schema, API, and safety invariants |
+| `docs/maintenance-checklist.md` | Safe editing, Preview QA, release, and rollback checklist |
 | `dashboard.html`, `products.html`, `inventory.html`, `packinglists.html`, `stockin.html`, `stockout.html`, `salesorders.html` | One file per tab |
 | `CNAME` | Custom domain for GitHub Pages |
 | `LICENSE` | MIT |
