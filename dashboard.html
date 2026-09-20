@@ -5,6 +5,11 @@
   <div class="page-title">Dashboard</div>
   <div class="page-meta" id="dashMeta">Editable sample data · resets on refresh</div>
 
+  <div class="sandbox-notice" role="note">
+    <strong>Public Sandbox</strong>
+    <span>You are exploring Rekago with sample data. Changes stay in this browser session and reset when you refresh.</span>
+  </div>
+
   <!-- Metric cards -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow)">
@@ -84,6 +89,18 @@
 </main>
 
 <style>
+.sandbox-notice {
+  align-items: center;
+  background: rgba(242,187,22,0.08);
+  border: 1px solid rgba(191,158,59,0.24);
+  border-radius: var(--radius);
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 20px;
+  padding: 10px 14px;
+}
+.sandbox-notice strong { color: var(--warn); white-space: nowrap; }
+.sandbox-notice span { color: var(--muted); font-size: 12px; }
 .period-btn {
   background: none;
   border: 1px solid var(--border);
