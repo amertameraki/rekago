@@ -316,17 +316,14 @@ const REKAGO = {
   skus: [], items: [], stockIn: [], stockOut: [], salesOrders: [],
 };
 
-// Flip to true once AuthorizedUsers has real people in it and you're ready
-// to let visitors attempt real Google sign-in (writes to your actual
-// Sheet). Until then, only the secondary "sign in with Google" option
-// inside the Try Demo modal stays hidden — the sandbox flow below is
-// always available and never touches the real backend either way.
-const TRY_LIVE_ENABLED = false;
+// Enabled on the preview branch for authenticated staging. Google Sign-In
+// still grants live access only to emails present in AuthorizedUsers; the
+// sandbox flow remains local and never touches the backend.
+const TRY_LIVE_ENABLED = true;
 
-// Keep the backend-backed Packing Lists workflow hidden until its staging
-// read/create tests pass. When false, Packing Lists keeps using its existing
-// browser-only preview data in every mode.
-const PACKING_LISTS_LIVE_ENABLED = false;
+// Enabled on the preview branch after the Apps Script read/create deployment.
+// Receiving remains a separate disabled stage.
+const PACKING_LISTS_LIVE_ENABLED = true;
 
 // Seed data for sandbox mode — a copy of the same numbers already shown
 // in demo mode across the app (dashboard/products/stock in/stock

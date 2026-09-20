@@ -27,7 +27,7 @@ The app can be in exactly one of these at any time (`REKAGO.mode`):
 |---|---|---|
 | **Demo** | Default, no action needed | Read-only. Shows fixed example data baked into each page (e.g. `DASH_MOCK`, `PRODUCTS_MOCK`). All "Add/Record/Create" buttons are disabled with a note pointing at Try Demo. |
 | **Sandbox** | Click **Try Demo** (top right) → enter *any* email, no verification | Fully interactive. Seeded from `SANDBOX_SEED` in `index.html` (a copy of the demo numbers). You can add products, record stock in/out, create sales orders — everything updates in memory and is fully cross-linked (add a product on Products, it shows up in Stock In's dropdown). **Nothing is ever sent to the real backend** — refreshing the page resets you back to Demo. |
-| **Live** | Inside the Try Demo modal, a secondary "sign in with a real Google account" option (currently hidden behind the `TRY_LIVE_ENABLED` flag in `index.html`, until `AuthorizedUsers` has real people in it) | Real Google Sign-In. Every write goes to the actual Google Sheet through the Apps Script backend, gated by a verified identity token. |
+| **Live** | Inside the Try Demo modal, a secondary "sign in with a real Google account" option (enabled on the `preview` branch for authenticated staging) | Real Google Sign-In. Every write goes to the actual Google Sheet through the Apps Script backend, gated by a verified identity token. |
 
 The point of Sandbox: anyone can click around and genuinely try the product with zero setup, without ever risking real data — because Sandbox writes never call `apiPost` at all, they just mutate `REKAGO.skus` / `REKAGO.items` / etc. in the browser's memory.
 
@@ -68,7 +68,7 @@ A richer, read-only catalog view — grid or table layout, with brand/classifica
 - A form to build a new packing list: header details (PL number, date, supplier, status — Draft / In Transit / Received / Cancelled, notes) plus line items (pick a SKU, quantity, unit cost) with running totals
 - A table of all packing lists with a "Receive" action to mark one as arrived
 
-Right now this whole tab is a **local-only preview** — everything is stored in your browser (`localStorage`), including in Live mode. Clicking "Receive" while signed in shows a toast explaining the real backend endpoint for it doesn't exist yet ("live receive comes next"); it doesn't write to your Google Sheet or touch SKU stock counts.
+On the `preview` branch, an authorized Live session reads and creates packing lists through the Apps Script backend. Demo and Sandbox sessions remain browser-only. Clicking "Receive" while signed in still shows a notice because receiving is the next backend stage; it does not yet write Stock In rows or change SKU stock.
 
 ### Stock In (`stockin.html`)
 Records inbound stock (restock, initial stock, or a return). Picking a SKU populates the Item dropdown. Submitting increases that SKU's `Current Stock` and recalculates its status (In Stock / Low Stock / Out of Stock) against its reorder threshold — both the real backend (`StockCalc.gs`) and Sandbox mode (`applySandboxStockDelta()` in `index.html`) do this exact same calculation.
