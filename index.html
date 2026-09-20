@@ -51,7 +51,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 .nav-brand-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--gold); letter-spacing: -0.3px; }
 .nav-brand-sub { font-size: 9px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(242,187,22,0.45); }
 .nav-tabs { display: flex; gap: 2px; flex: 1; justify-content: center; }
-.nav-tab { background: none; border: none; color: rgba(242,187,22,0.55); font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
+.nav-tab { background: none; border: none; color: rgba(242,187,22,0.55); font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 6px; transition: color 0.15s, background 0.15s; white-space: nowrap; }
 .nav-tab:hover { color: var(--gold); background: rgba(242,187,22,0.07); }
 .nav-tab.active { color: var(--nav); background: var(--gold); font-weight: 600; }
 .nav-right { display: flex; align-items: center; gap: 10px; min-width: 220px; justify-content: flex-end; position: relative; }
@@ -265,6 +265,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="nav-tab" onclick="loadPage('packinglists')">Packing Lists</button>
       <button class="nav-tab" onclick="loadPage('stockin')">Stock In</button>
       <button class="nav-tab" onclick="loadPage('stockout')">Outbound</button>
+      <button class="nav-tab" onclick="loadPage('ledger')">Ledger</button>
     </div>
     <div class="nav-right">
       <button class="lang-btn active" onclick="setLang('en')">EN</button>
@@ -289,7 +290,7 @@ const REKAGO = {
   // The public build has one mode: an editable, browser-only Sandbox.
   // It contains no production endpoint, identity token, or business data.
   mode: 'sandbox', lang: 'en',
-  skus: [], items: [], stockIn: [], stockOut: [], packingLists: [],
+  skus: [], items: [], stockIn: [], stockOut: [], packingLists: [], openingStock: {},
 };
 
 // Seed data for sandbox mode — a copy of the same numbers already shown
@@ -298,6 +299,9 @@ const REKAGO = {
 // consistent, cross-linked data once someone starts a sandbox session
 // (e.g. a product added on Products shows up in Stock In's dropdown).
 const SANDBOX_SEED = {
+  // Stock held before the dated sample movements below. Keeping this baseline
+  // fixed lets the ledger detect a stock change that has no matching movement.
+  openingStock: { 'BLM-001':30, 'BLM-002':38, 'BLM-003':12 },
   skus: [
     { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat','Category':'Single Item','Channels':'Tokopedia, TikTok Shop','Unit Price (IDR)':85000,'Cost Price (IDR)':42000,'Reorder Threshold':20,'Current Stock':84,'SKU Status':'In Stock','Notes':'' },
     { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin','Category':'Single Item','Channels':'Shopee, TikTok Shop, Direct','Unit Price (IDR)':45000,'Cost Price (IDR)':18000,'Reorder Threshold':15,'Current Stock':56,'SKU Status':'In Stock','Notes':'' },
@@ -491,6 +495,7 @@ function resetSandboxState() {
   }));
   REKAGO.stockIn     = SANDBOX_SEED.stockIn.map(row => ({ ...row }));
   REKAGO.stockOut    = SANDBOX_SEED.stockOut.map(row => ({ ...row }));
+  REKAGO.openingStock = { ...SANDBOX_SEED.openingStock };
 }
 
 function confirmSandboxReset() {

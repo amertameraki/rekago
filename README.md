@@ -39,10 +39,13 @@ is a separate HTML fragment loaded into `#page-frame`:
 | `packinglists.html` | Browser-only packing-list workflow |
 | `stockin.html` | Session-only inbound stock movements |
 | `stockout.html` | Multi-line outbound transactions with optional channel and order references |
+| `ledger.html` | Read-only unified movement history with per-SKU running balances |
 
 Shared state is held in `REKAGO` inside `index.html`. Product and stock changes
 are cross-linked during the session. Packing List receipt creates matching
-Stock In rows and increases physical stock exactly once. No browser action
+Stock In rows and increases physical stock exactly once. The Inventory Ledger
+combines Stock In and Outbound lines, links them to their source workflow, and
+reconciles their running balances to current physical stock. No browser action
 calls `backend/`.
 
 ## Run locally
@@ -68,4 +71,6 @@ are maintained separately and are not part of this public runtime.
 See [`docs/maintenance-checklist.md`](docs/maintenance-checklist.md) for the
 release checks and [`docs/packing-lists-contract.md`](docs/packing-lists-contract.md)
 for the reference receive-to-stock contract. The public inventory-first model
-is documented in [`docs/outbound-transactions.md`](docs/outbound-transactions.md).
+is documented in [`docs/outbound-transactions.md`](docs/outbound-transactions.md),
+and the ledger rules are documented in
+[`docs/inventory-ledger.md`](docs/inventory-ledger.md).

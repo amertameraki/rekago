@@ -1,0 +1,292 @@
+<!-- ledger.html — read-only inventory movement history for the public Sandbox -->
+<main>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px">
+    <div>
+      <div class="page-title" style="margin-bottom:2px">Inventory Ledger</div>
+      <div class="page-meta" id="ledgerMeta">Every physical-stock movement in one traceable history</div>
+    </div>
+    <span class="ledger-readonly">Read-only history</span>
+  </div>
+
+  <div class="ledger-metrics">
+    <div class="ledger-metric">
+      <span>Movements</span>
+      <strong id="ledgerMovementCount">0</strong>
+      <small>individual lines</small>
+    </div>
+    <div class="ledger-metric in">
+      <span>Units In</span>
+      <strong id="ledgerUnitsIn">0</strong>
+      <small>across visible rows</small>
+    </div>
+    <div class="ledger-metric out">
+      <span>Units Out</span>
+      <strong id="ledgerUnitsOut">0</strong>
+      <small>across visible rows</small>
+    </div>
+    <div class="ledger-metric balance">
+      <span>Current Physical</span>
+      <strong id="ledgerPhysicalStock">0</strong>
+      <small id="ledgerReconciliationStatus">all Sandbox SKUs</small>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <input class="search-input" id="ledgerSearch" placeholder="Search reference, SKU, item..." oninput="ledgerRender()">
+    <select class="form-select ledger-filter" id="ledgerSkuFilter" onchange="ledgerRender()">
+      <option value="">All SKUs</option>
+    </select>
+    <select class="form-select ledger-filter" id="ledgerDirectionFilter" onchange="ledgerRender()">
+      <option value="">All movements</option>
+      <option value="In">Stock In</option>
+      <option value="Out">Outbound</option>
+    </select>
+    <button class="btn-secondary" onclick="ledgerClearFilters()">Clear filters</button>
+  </div>
+
+  <div class="card ledger-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Reference</th>
+          <th>Source</th>
+          <th>SKU / Item</th>
+          <th>Movement Type</th>
+          <th class="ledger-number">Change</th>
+          <th class="ledger-number">Balance</th>
+          <th>Trace</th>
+        </tr>
+      </thead>
+      <tbody id="ledgerBody"></tbody>
+    </table>
+  </div>
+
+  <div class="ledger-note">
+    Opening balances represent stock held before the dated sample movements. Every later physical-stock change must have one matching ledger movement so the final balance continues to reconcile with Products, Inventory, and Dashboard.
+  </div>
+</main>
+
+<style>
+.ledger-readonly {
+  background: rgba(242,187,22,0.08);
+  border: 1px solid rgba(242,187,22,0.24);
+  border-radius: 20px;
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  padding: 5px 10px;
+  text-transform: uppercase;
+}
+.ledger-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.ledger-metric {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 15px 18px;
+}
+.ledger-metric.in { border-left: 3px solid var(--ok); }
+.ledger-metric.out { border-left: 3px solid var(--danger); }
+.ledger-metric.balance { border-left: 3px solid var(--gold); }
+.ledger-metric span {
+  color: var(--amber);
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.ledger-metric strong {
+  display: block;
+  font-size: 27px;
+  line-height: 1;
+  margin: 7px 0 5px;
+}
+.ledger-metric small { color: var(--muted); font-size: 11px; }
+.ledger-filter { background: var(--surface); width: 170px; }
+.ledger-card { overflow-x: auto; }
+.ledger-card table { min-width: 940px; }
+.ledger-number { text-align: right !important; }
+.ledger-change {
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+.ledger-change.in { color: var(--ok); }
+.ledger-change.out { color: var(--danger); }
+.ledger-balance { font-weight: 700; text-align: right; }
+.ledger-source {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ledger-item { color: var(--muted); font-size: 10px; margin-top: 2px; }
+.ledger-trace {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+.ledger-trace:hover { border-color: var(--gold); }
+.ledger-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: -4px;
+}
+@media (max-width: 900px) {
+  .ledger-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+
+<script>
+let ledgerRows = [];
+
+function init_ledger() {
+  ledgerRows = ledgerBuildRows();
+  ledgerPopulateSkuFilter();
+  ledgerRender();
+}
+
+function ledgerBuildRows() {
+  const packingListNumbers = new Set(REKAGO.packingLists
+    .filter(list => list.status === 'Received')
+    .map(list => String(list.number)));
+  const movements = [];
+
+  REKAGO.stockIn.forEach((row, index) => {
+    const reference = String(row['Reference ID'] || '').trim() || 'Stock In';
+    movements.push({
+      date: String(row.Date || ''),
+      reference,
+      source: packingListNumbers.has(reference) ? 'Packing List Receipt' : 'Stock In',
+      sourcePage: packingListNumbers.has(reference) ? 'packinglists' : 'stockin',
+      skuId: String(row['SKU ID'] || ''),
+      itemId: String(row['Item ID'] || ''),
+      movementType: String(row.Type || 'Stock In'),
+      direction: 'In',
+      quantity: Number(row['Qty In']) || 0,
+      signedQuantity: Number(row['Qty In']) || 0,
+      sourceOrder: 0,
+      rowOrder: REKAGO.stockIn.length - index,
+    });
+  });
+
+  REKAGO.stockOut.forEach((row, index) => {
+    const reference = String(row['Outbound Number'] || row['Reference ID'] || '').trim() || 'Outbound';
+    const quantity = Number(row['Qty Out']) || 0;
+    movements.push({
+      date: String(row.Date || ''),
+      reference,
+      source: 'Outbound',
+      sourcePage: 'stockout',
+      skuId: String(row['SKU ID'] || ''),
+      itemId: String(row['Item ID'] || ''),
+      movementType: String(row.Type || 'Outbound'),
+      direction: 'Out',
+      quantity,
+      signedQuantity: -quantity,
+      sourceOrder: 1,
+      rowOrder: REKAGO.stockOut.length - index,
+    });
+  });
+
+  movements.sort((a, b) =>
+    a.date.localeCompare(b.date)
+      || a.sourceOrder - b.sourceOrder
+      || a.rowOrder - b.rowOrder
+      || a.skuId.localeCompare(b.skuId)
+      || a.itemId.localeCompare(b.itemId)
+  );
+
+  const balances = { ...REKAGO.openingStock };
+
+  movements.forEach(movement => {
+    if (!(movement.skuId in balances)) balances[movement.skuId] = 0;
+    balances[movement.skuId] += movement.signedQuantity;
+    movement.resultingBalance = balances[movement.skuId];
+  });
+
+  return movements.reverse();
+}
+
+function ledgerPopulateSkuFilter() {
+  const select = document.getElementById('ledgerSkuFilter');
+  const selected = select.value;
+  const skuIds = [...new Set(ledgerRows.map(row => row.skuId).filter(Boolean))].sort();
+  select.innerHTML = '<option value="">All SKUs</option>'
+    + skuIds.map(skuId => `<option value="${escapeHtml(skuId)}">${escapeHtml(skuId)}</option>`).join('');
+  select.value = skuIds.includes(selected) ? selected : '';
+}
+
+function ledgerFilteredRows() {
+  const query = document.getElementById('ledgerSearch').value.trim().toLowerCase();
+  const skuId = document.getElementById('ledgerSkuFilter').value;
+  const direction = document.getElementById('ledgerDirectionFilter').value;
+  return ledgerRows.filter(row => {
+    const searchable = [row.reference, row.source, row.skuId, row.itemId, row.movementType].join(' ').toLowerCase();
+    return (!query || searchable.includes(query))
+      && (!skuId || row.skuId === skuId)
+      && (!direction || row.direction === direction);
+  });
+}
+
+function ledgerRender() {
+  // Rebuild on every render so movements created elsewhere in the session are
+  // always reflected when this page is revisited.
+  ledgerRows = ledgerBuildRows();
+  const rows = ledgerFilteredRows();
+  const unitsIn = rows.filter(row => row.direction === 'In').reduce((sum, row) => sum + row.quantity, 0);
+  const unitsOut = rows.filter(row => row.direction === 'Out').reduce((sum, row) => sum + row.quantity, 0);
+  const physical = REKAGO.skus.reduce((sum, sku) => sum + (Number(sku['Current Stock']) || 0), 0);
+  const reconciles = REKAGO.skus.every(sku => {
+    const latest = ledgerRows.find(row => row.skuId === String(sku['SKU ID'] || ''));
+    const ledgerBalance = latest ? latest.resultingBalance : Number(REKAGO.openingStock[sku['SKU ID']] || 0);
+    return ledgerBalance === (Number(sku['Current Stock']) || 0);
+  });
+
+  document.getElementById('ledgerMovementCount').textContent = rows.length.toLocaleString('id-ID');
+  document.getElementById('ledgerUnitsIn').textContent = unitsIn.toLocaleString('id-ID');
+  document.getElementById('ledgerUnitsOut').textContent = unitsOut.toLocaleString('id-ID');
+  document.getElementById('ledgerPhysicalStock').textContent = physical.toLocaleString('id-ID');
+  const reconciliationStatus = document.getElementById('ledgerReconciliationStatus');
+  reconciliationStatus.textContent = reconciles ? 'reconciled to ledger' : 'balance mismatch — review movements';
+  reconciliationStatus.style.color = reconciles ? 'var(--ok)' : 'var(--danger)';
+  document.getElementById('ledgerMeta').textContent = `${rows.length} shown from ${ledgerRows.length} movements`;
+  document.getElementById('ledgerBody').innerHTML = rows.length
+    ? rows.map(row => `<tr>
+        <td>${escapeHtml(row.date || '-')}</td>
+        <td><span class="mono">${escapeHtml(row.reference)}</span></td>
+        <td><span class="ledger-source">${escapeHtml(row.source)}</span></td>
+        <td><span class="mono">${escapeHtml(row.skuId)}</span><div class="ledger-item">${escapeHtml(row.itemId || '-')}</div></td>
+        <td>${escapeHtml(row.movementType)}</td>
+        <td class="ledger-change ${row.direction.toLowerCase()}">${row.signedQuantity > 0 ? '+' : ''}${row.signedQuantity.toLocaleString('id-ID')}</td>
+        <td class="ledger-balance">${row.resultingBalance.toLocaleString('id-ID')}</td>
+        <td><button class="ledger-trace" onclick="ledgerOpenSource('${escapeHtml(row.sourcePage)}')">View source</button></td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="8">No movements match these filters</td></tr>';
+}
+
+function ledgerClearFilters() {
+  document.getElementById('ledgerSearch').value = '';
+  document.getElementById('ledgerSkuFilter').value = '';
+  document.getElementById('ledgerDirectionFilter').value = '';
+  ledgerRender();
+}
+
+function ledgerOpenSource(page) {
+  loadPage(page);
+}
+</script>
