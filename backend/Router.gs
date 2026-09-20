@@ -4,15 +4,12 @@
 // This is the only file that contains doGet() and doPost().
 // ============================================================
 
-// ── doGet — PUBLIC (no auth required) ────────────────────
+// ── doGet — PUBLIC HEALTH CHECK ONLY (no business data) ──
 function doGet(e) {
   const action = (e.parameter.action || '').trim();
 
   try {
     switch (action) {
-      case 'getProducts':  return ok({ data: getProductsPublic() });
-      case 'getItems':     return ok({ data: getItems() });
-      case 'getSettings':  return ok({ data: getSettings() });
       case 'ping':         return ok({ message: 'Rekago backend is live.' });
       default:             return err('Unknown action: ' + action, 404);
     }
@@ -49,8 +46,7 @@ function doPost(e) {
         return ok({ message: 'Access granted.', email });
 
       // ── Private reads ──
-      // getProducts here (unlike the doGet version above) includes Cost
-      // Price — safe because it's gated by the verified sign-in above.
+      // All business-data reads are gated by the verified sign-in above.
       case 'getProducts':     return ok({ data: getProducts() });
       case 'getStockIn':      return ok({ data: getStockIn() });
       case 'getStockOut':     return ok({ data: getStockOut() });

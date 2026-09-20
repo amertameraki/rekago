@@ -144,34 +144,22 @@ async function submitAddProduct() {
   };
   if (!payload.skuId || !payload.skuName) { showToast('SKU ID and name are required.', true); return; }
 
-  if (REKAGO.mode === 'sandbox') {
-    if (REKAGO.skus.some(s => s['SKU ID'] === payload.skuId)) {
-      showToast('SKU ID already exists: ' + payload.skuId, true); return;
-    }
-    REKAGO.skus.push({
-      'SKU ID': payload.skuId,
-      'SKU Name': payload.skuName,
-      'Category': payload.category || '',
-      'Channels': channels.join(', '),
-      'Unit Price (IDR)': Number(payload.unitPrice) || 0,
-      'Cost Price (IDR)': Number(payload.costPrice) || 0,
-      'Reorder Threshold': Number(payload.reorderThreshold) || 0,
-      'Current Stock': 0,
-      'SKU Status': 'In Stock',
-      'Notes': payload.notes || '',
-    });
-    showToast('Product added (sandbox — not saved to a real sheet).');
-    renderProducts();
-    return;
+  if (REKAGO.skus.some(s => s['SKU ID'] === payload.skuId)) {
+    showToast('SKU ID already exists: ' + payload.skuId, true); return;
   }
-
-  const res = await apiPost('addProduct', payload);
-  if (res.ok) {
-    showToast('Product added.');
-    await loadAllData();
-    renderProducts();
-  } else {
-    showToast(res.error || 'Error adding product.', true);
-  }
+  REKAGO.skus.push({
+    'SKU ID': payload.skuId,
+    'SKU Name': payload.skuName,
+    'Category': payload.category || '',
+    'Channels': channels.join(', '),
+    'Unit Price (IDR)': Number(payload.unitPrice) || 0,
+    'Cost Price (IDR)': Number(payload.costPrice) || 0,
+    'Reorder Threshold': Number(payload.reorderThreshold) || 0,
+    'Current Stock': 0,
+    'SKU Status': 'Out of Stock',
+    'Notes': payload.notes || '',
+  });
+  showToast('Product added to this Sandbox session.');
+  renderProducts();
 }
 </script>

@@ -1,4 +1,4 @@
-<!-- packinglists.html - inbound packing list workflow preview -->
+<!-- packinglists.html - browser-only inbound packing list workflow -->
 <main>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px">
     <div>
@@ -26,8 +26,8 @@
     </div>
     <div class="pl-metric live-note">
       <span>Write Mode</span>
-      <strong id="plWriteMode">Preview</strong>
-      <small>live receive comes next</small>
+      <strong id="plWriteMode">Sandbox</strong>
+      <small>this session only</small>
     </div>
   </div>
 
@@ -37,7 +37,7 @@
         <div class="form-section-title" style="margin:0;border:0;padding:0">New Packing List</div>
         <div class="pl-sub">Build an inbound shipment from supplier lines, then receive it into stock once it arrives.</div>
       </div>
-      <span class="status-pill low-stock" id="plModeBadge">Preview Only</span>
+      <span class="status-pill low-stock" id="plModeBadge">Browser Only</span>
     </div>
 
     <div class="form-grid form-grid-4">
@@ -266,8 +266,6 @@
 </style>
 
 <script>
-const PL_STORAGE_KEY = 'rekago_packing_lists_preview';
-
 const PL_SAMPLE = [
   {
     number: 'PL-2026-001',
@@ -301,47 +299,8 @@ async function init_packinglists() {
   document.getElementById('plDate').value = new Date().toISOString().slice(0, 10);
   plPopulateProducts();
   plRenderLines();
-  if (plUsesLiveBackend()) {
-    document.getElementById('plResetButton').style.display = 'none';
-    document.getElementById('plModeBadge').textContent = 'Live Data';
-    try {
-      await plLoadLiveLists();
-    } catch (e) {
-      plLists = [];
-      showToast('Could not load live packing lists.', true);
-    }
-  } else {
-    plLists = plLoadLists();
-  }
+  plLists = PL_SAMPLE.map(plNormalizeList);
   plRenderLists();
-}
-
-function plUsesLiveBackend() {
-  return PACKING_LISTS_LIVE_ENABLED && REKAGO.mode === 'live';
-}
-
-async function plLoadLiveLists() {
-  const response = await apiPost('getPackingLists', {});
-  if (!response.ok) throw new Error(response.error || 'Could not load packing lists.');
-  plLists = (Array.isArray(response.data) ? response.data : [])
-    .map(plNormalizeList)
-    .filter(list => list.number);
-}
-
-function plLoadLists() {
-  const saved = localStorage.getItem(PL_STORAGE_KEY);
-  if (!saved) return PL_SAMPLE.map(plNormalizeList);
-  try {
-    const parsed = JSON.parse(saved);
-    return (Array.isArray(parsed) ? parsed : []).map(plNormalizeList).filter(pl => pl.number);
-  } catch (e) {
-    localStorage.removeItem(PL_STORAGE_KEY);
-    return PL_SAMPLE.map(plNormalizeList);
-  }
-}
-
-function plSaveLists() {
-  localStorage.setItem(PL_STORAGE_KEY, JSON.stringify(plLists));
 }
 
 function plNormalizeList(row) {
@@ -408,17 +367,6 @@ function plNormalizeItem(row) {
 
 function plGetProducts() {
   if (hasLiveData() && REKAGO.skus.length) return REKAGO.skus.map(plNormalizeProduct).filter(p => p.sku);
-  try {
-    const saved = localStorage.getItem('rekago_inventory_preview_data');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const rows = Array.isArray(parsed) ? parsed : parsed?.data || parsed?.products || parsed?.items || [];
-      const products = rows.map(plNormalizeProduct).filter(p => p.sku);
-      if (products.length) return products;
-    }
-  } catch (e) {
-    localStorage.removeItem('rekago_inventory_preview_data');
-  }
   return [
     { sku:'BLM-001', productName:'Rattan Placemat', costIDR:22000 },
     { sku:'BLM-002', productName:'Linen Napkin', costIDR:9000 },
@@ -498,40 +446,10 @@ async function plCreateList() {
     lines: plLines.map(line => ({ ...line })),
   };
 
-  if (plUsesLiveBackend()) {
-    try {
-      const response = await apiPost('createPackingList', {
-        number: packingList.number,
-        date: packingList.date,
-        supplier: packingList.supplier,
-        status: packingList.status,
-        notes: packingList.notes,
-        lines: packingList.lines.map(line => ({
-          skuId: line.sku,
-          itemId: line.itemId,
-          qty: line.qty,
-          unitCost: line.unitCost,
-        })),
-      });
-      if (!response.ok) {
-        showToast(response.error || 'Could not create Packing List.', true);
-        return;
-      }
-      await plLoadLiveLists();
-      plClearDraft();
-      plRenderLists();
-      showToast('Packing List created.');
-    } catch (e) {
-      showToast('Could not create Packing List. Check your connection.', true);
-    }
-    return;
-  }
-
   plLists.unshift(packingList);
-  plSaveLists();
   plClearDraft();
   plRenderLists();
-  showToast('Packing List created in preview.');
+  showToast('Packing List created for this Sandbox session.');
 }
 
 function plClearDraft() {
@@ -544,11 +462,6 @@ function plClearDraft() {
 }
 
 function plResetSampleData() {
-  if (plUsesLiveBackend()) {
-    showToast('Sample reset is unavailable for live data.', true);
-    return;
-  }
-  localStorage.removeItem(PL_STORAGE_KEY);
   plLines = [];
   plLists = PL_SAMPLE.map(plNormalizeList);
   plClearDraft();
@@ -568,7 +481,7 @@ function plRenderLists() {
         const totalCost = pl.lines.reduce((sum, line) => sum + (line.qty * line.unitCost), 0);
         const terminal = pl.status === 'Received' || pl.status === 'Cancelled';
         const needsItemIds = pl.lines.some(line => !line.itemId);
-        const receiveButton = plUsesLiveBackend() && needsItemIds
+        const receiveButton = needsItemIds
           ? '<button class="btn-receive" disabled title="Match Item IDs before receiving">Needs Item IDs</button>'
           // Passed via data-* + this.dataset, not interpolated into a quoted
           // JS string literal inside onclick — the browser HTML-decodes
@@ -605,41 +518,14 @@ function plRenderMetrics() {
   document.getElementById('plOpenCount').textContent = open;
   document.getElementById('plInboundUnits').textContent = inbound.toLocaleString('id-ID');
   document.getElementById('plReceivedUnits').textContent = received.toLocaleString('id-ID');
-  document.getElementById('plWriteMode').textContent = plUsesLiveBackend() ? 'Live' : 'Preview';
+  document.getElementById('plWriteMode').textContent = 'Sandbox';
   document.getElementById('plMeta').textContent = `${plLists.length} packing lists tracked`;
 }
 
 async function plReceive(number) {
-  if (REKAGO.mode === 'live') {
-    if (!PACKING_LIST_RECEIVE_ENABLED) {
-      showToast('Live receiving is staged until the new backend is deployed.', true);
-      return;
-    }
-    const list = plLists.find(pl => pl.number === number);
-    if (!list) return;
-    if (list.lines.some(line => !line.itemId)) {
-      showToast('Match every line to an Item ID before receiving.', true);
-      return;
-    }
-    if (!window.confirm(`Receive ${number} into Stock In? This will increase SKU stock.`)) return;
-    try {
-      const response = await apiPost('receivePackingList', { number });
-      if (!response.ok) {
-        showToast(response.error || 'Could not receive Packing List.', true);
-        return;
-      }
-      await Promise.all([plLoadLiveLists(), loadAllData()]);
-      plRenderLists();
-      showToast(`${number} received into stock.`);
-    } catch (e) {
-      showToast('Could not receive Packing List. Check your connection.', true);
-    }
-    return;
-  }
   const list = plLists.find(pl => pl.number === number);
   if (!list) return;
   list.status = 'Received';
-  plSaveLists();
   plRenderLists();
   showToast(`${number} marked as received.`);
 }
@@ -647,32 +533,7 @@ async function plReceive(number) {
 async function plCancel(number) {
   const list = plLists.find(pl => pl.number === number);
   if (!list) return;
-  if (REKAGO.mode === 'live') {
-    if (!PACKING_LIST_CANCEL_ENABLED) {
-      showToast('Live cancellation is staged until the new backend is deployed.', true);
-      return;
-    }
-    if (list.recovered) {
-      showToast('Recovered Packing Lists need a real header before cancellation.', true);
-      return;
-    }
-    if (!window.confirm(`Cancel ${number}? This cannot be undone.`)) return;
-    try {
-      const response = await apiPost('cancelPackingList', { number });
-      if (!response.ok) {
-        showToast(response.error || 'Could not cancel Packing List.', true);
-        return;
-      }
-      await plLoadLiveLists();
-      plRenderLists();
-      showToast(`${number} cancelled.`);
-    } catch (e) {
-      showToast('Could not cancel Packing List. Check your connection.', true);
-    }
-    return;
-  }
   list.status = 'Cancelled';
-  plSaveLists();
   plRenderLists();
   showToast(`${number} cancelled.`);
 }

@@ -4,6 +4,25 @@ Use this checklist when revising Rekago. It is intentionally short enough to
 use during every change. Feature contracts contain the detailed business rules;
 this document defines the safe editing and release process.
 
+## Public Sandbox release gate
+
+The public runtime is browser-only. Before every public Preview deployment:
+
+- [ ] The app opens directly in editable Sandbox mode without sign-in.
+- [ ] Refreshing restores the fixed sample data.
+- [ ] Add Product, Stock In, Stock Out, Sales Order, and Packing List actions
+      work within the current session.
+- [ ] Browser network logs contain no request to Google Apps Script, Google
+      Identity, a production API, or a customer data source.
+- [ ] The frontend contains no deployed endpoint, OAuth client ID, identity
+      token, credential, or business data.
+- [ ] `connect-src` remains restricted to `'self'`.
+- [ ] The commercial CTA opens the intended external contact page.
+- [ ] The complete diff is reviewed, then pushed to `preview` only.
+
+The authenticated backend and Packing List checks below are retained for the
+private implementation. They are not deployment steps for the public Sandbox.
+
 ## Before editing
 
 - Read the affected feature contract and the relevant frontend and backend
@@ -26,7 +45,7 @@ this document defines the safe editing and release process.
 - Record intentional limitations and non-goals so future maintainers do not
   mistake them for omissions.
 
-## Packing Lists and receive-to-stock regression checks
+## Private reference: Packing Lists and receive-to-stock regression checks
 
 Use unique PL numbers and test SKUs in the Preview Sheet. Record starting stock
 before tests so every stock delta can be verified.
@@ -77,7 +96,7 @@ before tests so every stock delta can be verified.
 - [ ] Moving quickly between pages does not initialize a stale page or duplicate
       an action.
 
-## Preview deployment
+## Private reference: Apps Script Preview deployment
 
 - [ ] Review the complete diff; confirm no credentials or Sheet data are
       committed.
@@ -104,7 +123,7 @@ Result:
 Known limitations:
 ```
 
-## Production promotion
+## Private reference: Production promotion
 
 - [ ] The user has approved the Preview result.
 - [ ] The exact frontend commit and backend version passed Preview QA together.

@@ -263,19 +263,6 @@ function populateOrderProducts() {
 
 function getOrderProducts() {
   if (hasLiveData() && REKAGO.skus.length) return REKAGO.skus.map(normalizeOrderProduct).filter(p => p.sku);
-
-  try {
-    const saved = localStorage.getItem('rekago_inventory_preview_data');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const rows = Array.isArray(parsed) ? parsed : parsed?.data || parsed?.products || parsed?.items || [];
-      const products = rows.map(normalizeOrderProduct).filter(p => p.sku);
-      if (products.length) return products;
-    }
-  } catch (e) {
-    localStorage.removeItem('rekago_inventory_preview_data');
-  }
-
   return ORDER_PRODUCTS_MOCK.map(normalizeOrderProduct);
 }
 
@@ -426,33 +413,21 @@ async function submitNewOrder() {
   };
   if (!payload.soNumber) { showToast('SO Number is required.', true); return; }
 
-  if (REKAGO.mode === 'sandbox') {
-    if (REKAGO.salesOrders.some(o => o['SO Number'] === payload.soNumber)) {
-      showToast('SO Number already exists: ' + payload.soNumber, true); return;
-    }
-    REKAGO.salesOrders.unshift({
-      'SO Number': payload.soNumber,
-      Date: payload.date || new Date().toISOString().slice(0, 10),
-      Channel: payload.channel,
-      'Customer Ref': payload.customerRef || '',
-      'Total Qty': Number(payload.totalQty) || 0,
-      'Total Revenue (IDR)': Number(payload.totalRevenue) || 0,
-      Status: payload.status || 'Pending',
-    });
-    showToast('Sales Order created (sandbox — not saved to a real sheet).');
-    orderLines = [];
-    renderOrderLines();
-    renderOrders();
-    return;
+  if (REKAGO.salesOrders.some(o => o['SO Number'] === payload.soNumber)) {
+    showToast('SO Number already exists: ' + payload.soNumber, true); return;
   }
-
-  const res = await apiPost('createSO', payload);
-  if (res.ok) {
-    showToast('Sales Order created.');
-    await loadAllData();
-    renderOrders();
-  } else {
-    showToast(res.error || 'Error.', true);
-  }
+  REKAGO.salesOrders.unshift({
+    'SO Number': payload.soNumber,
+    Date: payload.date || new Date().toISOString().slice(0, 10),
+    Channel: payload.channel,
+    'Customer Ref': payload.customerRef || '',
+    'Total Qty': Number(payload.totalQty) || 0,
+    'Total Revenue (IDR)': Number(payload.totalRevenue) || 0,
+    Status: payload.status || 'Pending',
+  });
+  showToast('Sales Order created for this Sandbox session.');
+  orderLines = [];
+  renderOrderLines();
+  renderOrders();
 }
 </script>

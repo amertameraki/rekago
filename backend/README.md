@@ -1,15 +1,15 @@
 # Rekago Apps Script Backend
 
-This directory is the version-controlled source for the Google Apps Script
-backend used by Rekago. Google Apps Script does not deploy these files
-automatically, so the deployed Apps Script project and this directory must be
-kept in sync deliberately.
+This directory is a reference implementation of Rekago's Google Apps Script
+backend. The public Sandbox does not load, call, or deploy it. Customer and
+owner deployments belong in a private repository with private environment
+configuration. Google Apps Script does not deploy these files automatically.
 
 ## Request lifecycle
 
 ```text
-Rekago frontend
-      │ GET (public reads) or POST (private actions)
+Private Rekago frontend
+      │ GET (health check) or POST (private actions)
       ▼
 Router.gs
       │ private POST identity check
@@ -110,6 +110,8 @@ deployment has passed staging tests.
 Do not commit credentials, private keys, access tokens, or spreadsheet data to
 this directory.
 
-The OAuth client ID and Apps Script Web App URL identify public endpoints and
-are not authentication secrets. Authorization must continue to be enforced by
-server-side Google ID-token verification and the `AuthorizedUsers` Sheet.
+An OAuth client ID and Apps Script Web App URL are endpoint identifiers rather
+than authorization secrets, but they still do not belong in this public
+Sandbox configuration. Authorization must be enforced server-side by Google
+ID-token verification and the `AuthorizedUsers` Sheet in every private
+deployment.

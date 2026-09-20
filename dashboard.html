@@ -3,18 +3,7 @@
 
 <main>
   <div class="page-title">Dashboard</div>
-  <div class="page-meta" id="dashMeta">Last updated: demo mode</div>
-
-  <!-- Demo gate (hidden once sandbox/live) -->
-  <div class="demo-gate" id="demoGate" style="display:none">
-    <div class="demo-gate-text">
-      <strong>Want to edit data?</strong>
-      <p>Enter your email to try editing in a sandbox — nothing is saved to a real Google Sheet</p>
-    </div>
-    <div class="demo-gate-right">
-      <button class="btn-unlock" onclick="openModal()">Try Demo</button>
-    </div>
-  </div>
+  <div class="page-meta" id="dashMeta">Editable sample data · resets on refresh</div>
 
   <!-- Metric cards -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
@@ -157,16 +146,8 @@ function init_dashboard() {
   document.getElementById('mSold').textContent  = soldQty;
   document.getElementById('lowBadge').textContent = lowCount + ' low';
 
-  // Demo gate
-  if (REKAGO.mode === 'demo') {
-    document.getElementById('demoGate').style.display = 'flex';
-  }
-
-  // Meta
   document.getElementById('dashMeta').textContent =
-    REKAGO.mode === 'live'    ? 'Last updated: ' + new Date().toLocaleTimeString() + ' · Live mode' :
-    REKAGO.mode === 'sandbox' ? 'Last updated: ' + new Date().toLocaleTimeString() + ' · Sandbox mode' :
-    'Last updated: today · Demo mode';
+    'Last updated: ' + new Date().toLocaleTimeString() + ' · Sandbox sample data';
 
   // SKU table
   document.getElementById('skuTableBody').innerHTML = skus.map(s => {
@@ -196,7 +177,7 @@ function initChart() {
   const ctx = document.getElementById('revenueChart').getContext('2d');
   if (dashChart) dashChart.destroy();
 
-  // In live mode: aggregate from REKAGO.stockOut — for now falls back to mock
+  // The public Sandbox chart uses fixed illustrative trend data.
   const d = DASH_MOCK.chart[chartPeriod];
 
   dashChart = new Chart(ctx, {

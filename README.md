@@ -1,144 +1,67 @@
-# Rekago — Inventory, rekapped
+# Rekago Public Sandbox
 
-Rekago is lightweight, web-based inventory management software for a small
-business (Studio Tools · Amerta Meraki Digital Atelier). It has a static,
-no-build frontend (plain HTML/CSS/JS, no framework) backed by a Google Apps
-Script Web App that reads and writes a Google Sheet.
+Rekago is browser-based inventory management software for small product
+businesses. This public repository contains the demonstration edition: an
+editable Sandbox that uses dummy data and never connects to a business
+database or Google Sheet.
 
-Live site: **rekago.amertameraki.com** (served from the `main` branch via GitHub Pages)
+Public Sandbox: **rekago-demo.amertameraki.com**
 
----
+## Safety boundary
 
-## How it's put together
+The public Sandbox has one operating mode:
 
-```
-Browser (static site)  ──fetch──▶  Google Apps Script Web App  ──▶  Google Sheet
-   index.html + tabs                doGet (public) / doPost (auth)     (the real data)
-```
+- It starts immediately without sign-in.
+- All changes exist only in the current browser session.
+- Refreshing the page restores the fixed sample data.
+- There is no Apps Script URL, OAuth client ID, identity token, or production
+  configuration in the frontend.
+- The browser Content Security Policy permits network requests only to the
+  same origin, apart from static font and chart assets.
 
-- **Frontend**: `index.html` is the app shell — nav, splash screen, onboarding tour, the "Try Demo" modal, and all shared state/logic. Every tab (`dashboard.html`, `products.html`, etc.) is a separate file containing just that page's `<main>` markup, its own `<style>`, and its own `<script>`. `index.html`'s `loadPage(name)` fetches a tab's HTML on first visit, injects it into `#page-frame`, executes its `<script>`, and calls that page's `init_<name>()` function.
-- **Backend**: the version-controlled Google Apps Script source is in
-  `backend/`. The deployed copy lives in Apps Script and must be updated as a
-  separate deployment. `doGet` serves limited public, read-only endpoints;
-  `doPost` handles private reads and writes and requires a **Google Sign-In ID
-  token**, which it verifies server-side before touching the Sheet.
-- **Config**: `config.js` holds the Apps Script Web App URL and the Google OAuth Client ID. Both are safe to be public — see the comment at the top of that file for why.
+The `backend/` directory is retained as reference source for maintainers. It is
+not used or deployed by the public Sandbox. Its unauthenticated `doGet` route
+exposes only `ping`; all business-data operations remain authenticated POST
+actions. Replace placeholder configuration only inside a private deployment.
 
----
+## Architecture
 
-## The three modes
-
-The app can be in exactly one of these at any time (`REKAGO.mode`):
-
-| Mode | How you get there | What it can do |
-|---|---|---|
-| **Demo** | Default, no action needed | Read-only. Shows fixed example data baked into each page (e.g. `DASH_MOCK`, `PRODUCTS_MOCK`). All "Add/Record/Create" buttons are disabled with a note pointing at Try Demo. |
-| **Sandbox** | Click **Try Demo** (top right) → enter *any* email, no verification | Fully interactive. Seeded from `SANDBOX_SEED` in `index.html` (a copy of the demo numbers). You can add products, record stock in/out, create sales orders — everything updates in memory and is fully cross-linked (add a product on Products, it shows up in Stock In's dropdown). **Nothing is ever sent to the real backend** — refreshing the page resets you back to Demo. |
-| **Live** | Inside the Try Demo modal, a secondary "sign in with a real Google account" option (enabled on the `preview` branch for authenticated staging) | Real Google Sign-In. Every write goes to the actual Google Sheet through the Apps Script backend, gated by a verified identity token. |
-
-The point of Sandbox: anyone can click around and genuinely try the product with zero setup, without ever risking real data — because Sandbox writes never call `apiPost` at all, they just mutate `REKAGO.skus` / `REKAGO.items` / etc. in the browser's memory.
-
-`hasLiveData()` (mode is `'live'` or `'sandbox'`) decides whether a page reads from the shared `REKAGO.*` arrays or its own local demo-mode mock data. `requireEditable()` is the gate every "submit" button checks before doing anything.
-
----
-
-## The tabs, one by one
-
-### Dashboard (`dashboard.html`)
-**What it's for:** a quick "is everything okay?" health check of the whole operation — the first thing you see, before you go dig into a specific tab.
-
-**What it covers:**
-- Four metric tiles: Total SKUs, Total Items (variants), how many SKUs are currently Low Stock, and units Sold This Week
-- A SKU overview table — every SKU with a visual stock bar and status pill, so low/out-of-stock products jump out immediately
-- A Revenue & Orders chart (bars = revenue, line = order count), toggleable between Week and Month, to see whether sales are trending up or down
-- In Demo mode, a "Want to edit data?" banner nudging you toward Try Demo
-
-It's read-only — there's nothing to add or record here, it only reflects what's already in Products/Stock In/Stock Out.
-
-### Products (`products.html`)
-**What it's for:** the master catalog — the source of truth for what products exist, what they cost, what they sell for, and when they need reordering. Every other tab depends on a SKU existing here first: Stock In/Out's SKU dropdowns, Inventory, and Sales Orders' product picker all read from this same list.
-
-**What it covers:**
-- An **Add Product** form to register a new SKU: SKU ID, product name, category, unit price, cost price, reorder threshold, which sales channels it's listed on (Tokopedia/Shopee/TikTok Shop/Direct), and optional notes
-- A searchable, filterable (by category) table of every existing SKU, showing its channels, unit price, current stock, and status
-
-Adding a SKU here doesn't create any stock — a new product starts at 0 units until you record a Stock In for it.
-
-### Inventory (`inventory.html`)
-A richer, read-only catalog view — grid or table layout, with brand/classification filters and low-stock/out-of-stock status filtering. Has its own "Import JSON" feature for pasting arbitrary catalog data to preview (stored in `localStorage`, browser-only, unrelated to Sandbox mode).
-
-### Packing Lists (`packinglists.html`)
-**What it's for:** tracking shipments from suppliers that are *on their way* — the "what's expected to arrive, and when" list. This is distinct from Stock In, which is for stock that has *already arrived and been counted*. Packing Lists exists so you have visibility into inbound inventory before it's a confirmed Stock In record.
-
-**What it covers:**
-- Metric tiles: how many packing lists are still open (not yet received), total inbound units expected, and total units already received
-- A form to build a new packing list: header details (PL number, date, supplier, status — Draft / In Transit / Received / Cancelled, notes) plus line items (pick a SKU, quantity, unit cost) with running totals
-- A table of all packing lists with a "Receive" action to mark one as arrived
-
-On the `preview` branch, an authorized Live session reads, creates, receives, and cancels packing lists through the Apps Script backend. Receiving writes Stock In records and updates SKU stock; cancellation is limited to Draft/In Transit and does not change inventory. Recovered legacy groups remain protected until reconciled. Demo and Sandbox sessions remain browser-only.
-
-### Stock In (`stockin.html`)
-Records inbound stock (restock, initial stock, or a return). Picking a SKU populates the Item dropdown. Submitting increases that SKU's `Current Stock` and recalculates its status (In Stock / Low Stock / Out of Stock) against its reorder threshold — both the real backend (`StockCalc.gs`) and Sandbox mode (`applySandboxStockDelta()` in `index.html`) do this exact same calculation.
-
-### Stock Out (`stockout.html`)
-The mirror of Stock In — records outbound stock (sold, marketing sample, damaged, or a return inbound, which does *not* deduct stock). Same stock-recalculation logic, just subtracting instead of adding.
-
-### Sales Orders (`salesorders.html`)
-Create a sales order: header fields (SO number, date, channel, customer ref, status) plus a line-item builder that checks each product's available stock as you add lines and auto-fills the order's total qty/revenue. Sales Orders don't themselves touch SKU stock — that only happens via Stock Out.
-
----
-
-## How the tabs connect
-
-- **`REKAGO`** (declared in `index.html`) is the one shared state object every page reads and writes: `mode`, `email`, `idToken`, and the five data arrays (`skus`, `items`, `stockIn`, `stockOut`, `salesOrders`).
-- In **Live** mode, those arrays are populated once after sign-in by `loadAllData()`, which calls the backend for each dataset.
-- In **Sandbox** mode, they're seeded once from `SANDBOX_SEED` when you click Start, then mutated directly by each page's submit handler.
-- In **Demo** mode, they stay empty — every page falls back to its own hardcoded mock constant instead.
-- Because every page checks the *same* `REKAGO.skus` (via `hasLiveData()`), anything added on one tab is immediately visible on every other tab in the same session — no page reload needed.
-- Shared helpers used by every page live in `index.html`: `escapeHtml()` (XSS-safe rendering), `formatRp()`, `channelPill()`/`statusPill()`, `showToast()`, and `apiGet()`/`apiPost()` (the only two functions that ever talk to the real backend).
-
----
-
-## Frontend ↔ backend connection
-
-- `apiGet(action)` → `GET {gsUrl}?action=...` — **no auth**, used only for data that's safe to be public (`getProducts` without Cost Price, `getItems`, `getSettings`, `ping`).
-- `apiPost(action, payload)` → `POST {gsUrl}` with `{ action, idToken, ...payload }` — **every** action here requires a verified Google Sign-In token; the backend checks it against `AuthorizedUsers` before doing anything, including reads that return sensitive data (e.g. the authenticated `getProducts` includes Cost Price).
-- The backend never trusts a client-supplied email — it always derives the caller's identity from Google's own verification of the ID token (`verifiedEmailFromIdToken()` in `Auth.gs`).
-- A `401`/`403` response from any `apiPost` call automatically drops the frontend back to Demo mode with a "session expired" toast.
-
----
-
-## Deploying changes
-
-- **Preview first**: development work is pushed to the `preview` branch and
-  verified against the Preview frontend, Preview Apps Script deployment, and
-  staging Sheet before Production promotion.
-- **Frontend**: the HTML/CSS/JS in this repository is deployed by the configured
-  frontend host. Production must use a reviewed commit from `main`; do not
-  promote an untested Preview build.
-- **Backend**: copy the reviewed files from `backend/` into the matching Apps
-  Script project, then use **Deploy → Manage deployments → Edit → New version
-  → Deploy**. Saving alone does not update the Web App endpoint.
-- **Version pairing**: record the frontend commit and Apps Script deployment
-  version that passed QA together. A frontend feature must not be enabled until
-  its backend version is available in the same environment.
-
-See [`backend/README.md`](backend/README.md) for the backend file map and
-deployment process, and
-[`docs/maintenance-checklist.md`](docs/maintenance-checklist.md) for release
-checks.
-
----
-
-## File reference
+`index.html` is the static app shell and shared in-memory data store. Each tab
+is a separate HTML fragment loaded into `#page-frame`:
 
 | File | Purpose |
 |---|---|
-| `index.html` | App shell: nav, splash, tour, Try Demo modal, shared state/helpers, `loadPage()` router |
-| `config.js` | Apps Script URL + Google OAuth Client ID (committed, not secret — see file comment) |
-| `backend/*.gs` | Version-controlled Google Apps Script backend source |
-| `docs/packing-lists-contract.md` | Packing List behavior, schema, API, and safety invariants |
-| `docs/maintenance-checklist.md` | Safe editing, Preview QA, release, and rollback checklist |
-| `dashboard.html`, `products.html`, `inventory.html`, `packinglists.html`, `stockin.html`, `stockout.html`, `salesorders.html` | One file per tab |
-| `CNAME` | Custom domain for GitHub Pages |
-| `LICENSE` | MIT |
+| `dashboard.html` | Operational summary and sample charts |
+| `products.html` | Product catalog and new-SKU form |
+| `inventory.html` | Inventory grid/table and session-only JSON preview |
+| `packinglists.html` | Browser-only packing-list workflow |
+| `stockin.html` | Session-only inbound stock movements |
+| `stockout.html` | Session-only outbound stock movements |
+| `salesorders.html` | Session-only sales-order creation |
+
+Shared state is held in `REKAGO` inside `index.html`. Product and stock changes
+are cross-linked during the session. No browser action calls `backend/`.
+
+## Run locally
+
+Serve the directory over HTTP so page fragments can be fetched:
+
+```sh
+python3 -m http.server 8000
+```
+
+Then open `http://localhost:8000`.
+
+## Contribution and deployment
+
+Development is reviewed and tested on the `preview` branch before promotion to
+`main`. Confirm that the Sandbox makes no requests to Google Apps Script or
+Google Identity before every public release.
+
+The public edition is MIT-licensed. Commercial implementations, private
+configuration, customer data, production integrations, and advanced modules
+are maintained separately and are not part of this public runtime.
+
+See [`docs/maintenance-checklist.md`](docs/maintenance-checklist.md) for the
+release checks and [`docs/packing-lists-contract.md`](docs/packing-lists-contract.md)
+for the reference receive-to-stock contract.

@@ -1,8 +1,9 @@
 # Rekago Packing Lists — Functional Contract and Maintainer Guide
 
-Status: implemented on the `preview` branch. The matching Google Apps Script
-files must also be deployed to the Preview Apps Script deployment before the
-Live-mode workflow can be tested end to end.
+Status: the authenticated receive-to-stock contract is retained here as a
+reference implementation. The public Sandbox exercises a browser-only version
+with dummy data and does not call Google Apps Script. Real deployments and
+their environment records must be maintained privately.
 
 This document describes the behavior and compatibility rules that maintainers
 must preserve when changing Packing Lists or receive-to-stock. For the release

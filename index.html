@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!--
-  Delivered via <meta> because GitHub Pages can't set response headers.
+  Delivered via <meta> as a fallback for static hosts. Production hosting should
+  also send these directives as HTTP response headers.
   Note: some directives (frame-ancestors, sandbox, report-uri) are
   ignored entirely when set this way — real clickjacking protection
   would need an HTTP header, which isn't available on this host.
@@ -14,10 +15,8 @@
   or receive fetch calls), not a substitute for escaping untrusted data
   before it's rendered — that's handled separately (see escapeHtml()).
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <title>Rekago — Inventory, rekapped</title>
-<script src="config.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -61,7 +60,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 .language-note.show { opacity: 1; transform: translateY(0); }
 .language-note::before { content: ''; position: absolute; top: -6px; right: 82px; width: 10px; height: 10px; background: var(--surface); border-left: 1px solid var(--border); border-top: 1px solid var(--border); transform: rotate(45deg); }
 .demo-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: var(--warn); background: rgba(166,96,10,0.12); padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
-.btn-trylive { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 6px; transition: opacity 0.15s; }
+.btn-trylive { background: var(--gold); color: var(--nav); border: none; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 6px; transition: opacity 0.15s; text-decoration: none; white-space: nowrap; }
 .btn-trylive:hover { opacity: 0.88; }
 .live-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-weight: 600; }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2s infinite; }
@@ -270,36 +269,11 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="lang-btn" onclick="setLang('id')">ID</button>
       <button class="lang-btn" onclick="setLang('ko')">한국어</button>
       <div class="language-note" id="languageNote" role="status"></div>
-      <span class="demo-badge" id="modeBadge">DEMO</span>
-      <button class="btn-trylive" id="btnTryLive" onclick="openModal()">Try Demo</button>
-      <div class="live-indicator" id="liveIndicator" style="display:none">
-        <span class="live-dot"></span><span id="liveIndicatorLabel">Live</span>
-      </div>
+      <span class="demo-badge" id="modeBadge">SANDBOX</span>
+      <a class="btn-trylive" id="consultCta" href="https://amertameraki.com" target="_blank" rel="noopener noreferrer">Build a System Like This</a>
     </div>
   </nav>
   <div id="page-frame"></div>
-</div>
-
-<!-- TRY DEMO MODAL -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
-    <div class="modal-brand">Rekago</div>
-    <div class="modal-title">Try the demo</div>
-    <div class="modal-sub">Enter your email to explore Rekago instantly — add products, record stock, create orders. This is a sandbox: nothing you do here is saved to a real Google Sheet.</div>
-    <div>
-      <label class="modal-label">Your Email</label>
-      <input class="modal-input" id="modalEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter') startSandbox()">
-      <div class="modal-error" id="modalError"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-modal-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-modal-primary" id="btnStartDemo" onclick="startSandbox()">Start</button>
-    </div>
-    <div id="realAccessSection" style="display:none">
-      <div class="modal-note" style="margin-top:18px;margin-bottom:8px">Have real access to a connected Google Sheet?</div>
-      <div id="gSignInBtn" style="display:flex;justify-content:center;min-height:40px"></div>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -309,31 +283,14 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
 // GLOBAL STATE
 // ============================================================
 const REKAGO = {
-  // 'demo' (read-only, mock data) | 'sandbox' (any email, forms enabled,
-  // writes are local-only — never touch the real backend) | 'live'
-  // (verified Google Sign-In, writes go to the real Google Sheet).
-  mode: 'demo', email: null, idToken: null, lang: 'en',
+  // The public build has one mode: an editable, browser-only Sandbox.
+  // It contains no production endpoint, identity token, or business data.
+  mode: 'sandbox', lang: 'en',
   skus: [], items: [], stockIn: [], stockOut: [], salesOrders: [],
 };
 
-// Enabled on the preview branch for authenticated staging. Google Sign-In
-// still grants live access only to emails present in AuthorizedUsers; the
-// sandbox flow remains local and never touches the backend.
-const TRY_LIVE_ENABLED = true;
-
-// Enabled on the preview branch after the Apps Script read/create deployment.
-const PACKING_LISTS_LIVE_ENABLED = true;
-
-// Enabled on the preview branch after the matching Apps Script receive
-// endpoint was deployed and the atomic receive/rollback cases passed QA.
-const PACKING_LIST_RECEIVE_ENABLED = true;
-
-// Enabled on Preview after the matching Apps Script cancellation endpoint
-// was deployed and the validation/rollback cases passed QA.
-const PACKING_LIST_CANCEL_ENABLED = true;
-
 // Seed data for sandbox mode — a copy of the same numbers already shown
-// in demo mode across the app (dashboard/products/stock in/stock
+// in the public Sandbox across the app (dashboard/products/stock in/stock
 // out/sales orders), just collected in one place so every page reads
 // consistent, cross-linked data once someone starts a sandbox session
 // (e.g. a product added on Products shows up in Stock In's dropdown).
@@ -506,138 +463,16 @@ function showLanguageNote(lang) {
 }
 
 // ============================================================
-// MODAL / GOOGLE SIGN-IN
+// SANDBOX DATA
 // ============================================================
-let gsiInitialized = false;
-
-function openModal() {
-  const errEl = document.getElementById('modalError');
-  errEl.textContent = '';
-  document.getElementById('modalEmail').value = '';
-  document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('modalEmail').focus();
-  if (TRY_LIVE_ENABLED) {
-    document.getElementById('realAccessSection').style.display = 'block';
-    initGoogleSignIn();
-  } else {
-    document.getElementById('realAccessSection').style.display = 'none';
-  }
-}
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-}
-
-// Sandbox: any email, no verification, zero backend calls. Everything
-// added/changed only lives in REKAGO.* for this browser tab's session —
-// refreshing the page resets it back to SANDBOX_SEED.
-function startSandbox() {
-  const email = document.getElementById('modalEmail').value.trim();
-  const errEl = document.getElementById('modalError');
-  errEl.textContent = '';
-  if (!email || !email.includes('@')) { errEl.textContent = 'Enter a valid email address.'; return; }
-
-  REKAGO.mode        = 'sandbox';
-  REKAGO.email       = email;
+// The public build intentionally has no backend transport. Refreshing the page
+// reconstructs these arrays from the fixed seed.
+function resetSandboxState() {
   REKAGO.skus        = SANDBOX_SEED.skus.map(row => ({ ...row }));
   REKAGO.items       = SANDBOX_SEED.items.map(row => ({ ...row }));
   REKAGO.stockIn     = SANDBOX_SEED.stockIn.map(row => ({ ...row }));
   REKAGO.stockOut    = SANDBOX_SEED.stockOut.map(row => ({ ...row }));
   REKAGO.salesOrders = SANDBOX_SEED.salesOrders.map(row => ({ ...row }));
-
-  closeModal();
-  setSandboxMode();
-  const activeTab = document.querySelector('.nav-tab.active');
-  if (activeTab) { const n = activeTab.textContent.toLowerCase().replace(/\s/g,''); PAGE_CACHE[n] = null; activeTab.click(); }
-  showToast("You're exploring in sandbox mode — nothing here is saved to a real Google Sheet.");
-}
-
-function initGoogleSignIn() {
-  const errEl = document.getElementById('modalError');
-  if (!window.REKAGO_CONFIG?.gsUrl || REKAGO_CONFIG.gsUrl.includes('YOUR_APPS')) {
-    errEl.textContent = 'Backend not configured. Add your Apps Script URL to config.js.'; return;
-  }
-  if (!window.REKAGO_CONFIG?.googleClientId || REKAGO_CONFIG.googleClientId.includes('YOUR_CLIENT_ID')) {
-    errEl.textContent = 'Sign-in not configured. Add your Google Client ID to config.js.'; return;
-  }
-  if (!window.google?.accounts?.id) {
-    errEl.textContent = 'Sign-in is still loading — try again in a moment.'; return;
-  }
-  if (!gsiInitialized) {
-    google.accounts.id.initialize({
-      client_id: REKAGO_CONFIG.googleClientId,
-      callback: handleCredentialResponse,
-    });
-    gsiInitialized = true;
-  }
-  document.getElementById('gSignInBtn').innerHTML = '';
-  google.accounts.id.renderButton(document.getElementById('gSignInBtn'), {
-    theme: 'outline', size: 'large', width: 260,
-  });
-}
-
-async function handleCredentialResponse(response) {
-  const errEl = document.getElementById('modalError');
-  errEl.textContent = 'Connecting...';
-  try {
-    const res  = await fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action: 'login', idToken: response.credential }) });
-    const data = await res.json();
-    if (data.ok) {
-      REKAGO.mode = 'live'; REKAGO.idToken = response.credential; REKAGO.email = data.email || null;
-      closeModal(); setLiveMode(); await loadAllData();
-      const activeTab = document.querySelector('.nav-tab.active');
-      if (activeTab) { const n = activeTab.textContent.toLowerCase().replace(/\s/g,''); PAGE_CACHE[n] = null; activeTab.click(); }
-      showToast('Connected — live data loaded.');
-    } else { errEl.textContent = data.error || 'Access denied.'; }
-  } catch (e) { errEl.textContent = 'Connection failed. Check your config.js URL.'; }
-}
-
-function setLiveMode() {
-  document.getElementById('modeBadge').style.display     = 'none';
-  document.getElementById('btnTryLive').style.display    = 'none';
-  document.getElementById('liveIndicatorLabel').textContent = 'Live';
-  document.getElementById('liveIndicator').style.display = 'flex';
-}
-function setSandboxMode() {
-  document.getElementById('modeBadge').style.display     = 'none';
-  document.getElementById('btnTryLive').style.display    = 'none';
-  document.getElementById('liveIndicatorLabel').textContent = 'Sandbox';
-  document.getElementById('liveIndicator').style.display = 'flex';
-}
-function setDemoMode() {
-  REKAGO.mode = 'demo'; REKAGO.idToken = null; REKAGO.email = null;
-  REKAGO.skus = []; REKAGO.items = []; REKAGO.stockIn = []; REKAGO.stockOut = []; REKAGO.salesOrders = [];
-  document.getElementById('modeBadge').style.display     = '';
-  document.getElementById('btnTryLive').style.display     = '';
-  document.getElementById('liveIndicator').style.display  = 'none';
-}
-
-// ============================================================
-// DATA
-// ============================================================
-async function apiGet(action) {
-  return fetch(REKAGO_CONFIG.gsUrl + '?action=' + action).then(r => r.json());
-}
-async function apiPost(action, payload) {
-  const data = await fetch(REKAGO_CONFIG.gsUrl, { method: 'POST', body: JSON.stringify({ action, idToken: REKAGO.idToken, ...payload }) }).then(r => r.json());
-  if (!data.ok && (data.code === 401 || data.code === 403) && REKAGO.mode === 'live') {
-    setDemoMode();
-    showToast('Session expired — please sign in again.', true);
-  }
-  return data;
-}
-async function loadAllData() {
-  // getProducts goes through apiPost (verified sign-in), not apiGet, so we
-  // get the full product data including Cost Price — the public doGet
-  // version deliberately strips that before it ever reaches this call.
-  const [skus, items, si, so, orders] = await Promise.all([
-    apiPost('getProducts'), apiGet('getItems'),
-    apiPost('getStockIn'), apiPost('getStockOut'), apiPost('getSalesOrders'),
-  ]);
-  if (skus.ok)   REKAGO.skus        = skus.data;
-  if (items.ok)  REKAGO.items       = items.data;
-  if (si.ok)     REKAGO.stockIn     = si.data;
-  if (so.ok)     REKAGO.stockOut    = so.data;
-  if (orders.ok) REKAGO.salesOrders = orders.data;
 }
 
 // ============================================================
@@ -653,21 +488,16 @@ function showToast(msg, isError) {
 // ============================================================
 // HELPERS
 // ============================================================
-// True once REKAGO.skus/items/etc hold real data to read (sandbox or
-// live) rather than each page's own hardcoded demo-mode mock arrays.
 function hasLiveData() {
-  return REKAGO.mode === 'live' || REKAGO.mode === 'sandbox';
-}
-// Gate for every write action (Add Product, Stock In/Out, Sales Orders).
-// Sandbox passes this — its writes just go to REKAGO.* in memory, never
-// to the real backend (see each submit* function for the branch).
-function requireEditable() {
-  if (!hasLiveData()) { showToast('Enter your email to try editing — click Try Demo.', true); return false; }
   return true;
 }
-// Sandbox-only mirror of the backend's updateSkuStock (StockCalc.gs) —
-// applies a stock delta and recomputes SKU Status the same way, so the
-// sandbox experience matches what the real backend would do.
+function requireEditable() {
+  return true;
+}
+// Kept for page compatibility; all public forms are editable.
+function lockDemoWriteForm() {}
+
+// Applies a stock delta and recomputes the sample SKU status in memory.
 function applySandboxStockDelta(skuId, delta) {
   const sku = REKAGO.skus.find(s => s['SKU ID'] === skuId);
   if (!sku) return;
@@ -677,24 +507,10 @@ function applySandboxStockDelta(skuId, delta) {
   sku['Current Stock'] = newStock;
   sku['SKU Status'] = newStock === 0 ? 'Out of Stock' : newStock <= reorder ? 'Low Stock' : 'In Stock';
 }
-function lockDemoWriteForm(sectionId, buttonId) {
-  if (REKAGO.mode !== 'demo') return;
-  const section = document.getElementById(sectionId);
-  const button = document.getElementById(buttonId);
-  if (!section || !button || section.querySelector('.demo-readonly-note')) return;
-  const note = document.createElement('div');
-  note.className = 'demo-readonly-note';
-  note.innerHTML = '<strong>Demo mode:</strong> this form is read-only. Click Try Demo (top right) to enter an email and try editing.';
-  section.insertBefore(note, section.firstElementChild);
-  button.disabled = true;
-  button.textContent = 'Try Demo to unlock';
-}
 function formatRp(val) { return 'Rp ' + Number(val).toLocaleString('id-ID'); }
 // Escapes a value before it's interpolated into an .innerHTML template.
-// Every field below ultimately comes from the backing Google Sheet, which
-// any authorized user (or, before the Sign-In fix, anyone spoofing an
-// email) can write via addProduct/addStockIn/addStockOut/createSO — so it
-// must never be trusted as safe HTML.
+// Sandbox forms and imported session data are untrusted and must never be
+// rendered as executable HTML.
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -747,7 +563,7 @@ const TOUR_KEY = 'rekago_tour_done';
 const TOUR_STEPS = [
   {
     title:  'Dashboard',
-    body:   'Your inventory at a glance — SKU counts, low stock alerts, and revenue vs orders. Updates live when connected.',
+    body:   'Your inventory at a glance — SKU counts, low stock alerts, and revenue vs orders. Sandbox changes update this view immediately.',
     target: () => document.querySelector('.nav-tab[onclick*="dashboard"]'),
     pos:    'below',
   },
@@ -776,9 +592,9 @@ const TOUR_STEPS = [
     pos:    'below',
   },
   {
-    title:  'Try Demo',
-    body:   'Enter any email to explore with editable data — add products, record stock, create orders. Nothing is saved to a real Google Sheet.',
-    target: () => document.getElementById('btnTryLive'),
+    title:  'Build a System Like This',
+    body:   'Need an inventory workflow tailored to your business? Connect with us to discuss a customized implementation.',
+    target: () => document.getElementById('consultCta'),
     pos:    'below-left',
   },
 ];
@@ -880,6 +696,7 @@ function skipTour() {
 // BOOT
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
+  resetSandboxState();
   document.head.insertAdjacentHTML('beforeend', SHARED_CSS);
   runSplash();
 });

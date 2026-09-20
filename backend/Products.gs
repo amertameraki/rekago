@@ -7,18 +7,9 @@
 
 // Full product data, including Cost Price — margin/COGS data that must
 // never be served to an unauthenticated caller. Only reachable via doPost
-// (Google Sign-In verified). See getProductsPublic for the doGet version.
+// after Google Sign-In has been verified.
 function getProducts() {
   return sheetToObjects(SHEET.SKUS);
-}
-
-// Public projection for doGet — strips Cost Price before it ever leaves
-// the server. doGet has no auth, so anyone can call ?action=getProducts.
-function getProductsPublic() {
-  return getProducts().map(row => {
-    const { 'Cost Price (IDR)': _cost, ...rest } = row;
-    return rest;
-  });
 }
 
 function getItems() {

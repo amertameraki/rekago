@@ -145,33 +145,21 @@ async function submitStockIn() {
   };
   if (!payload.qty || Number(payload.qty) < 1) { showToast('Qty must be at least 1.', true); return; }
 
-  if (REKAGO.mode === 'sandbox') {
-    const qtyNum      = Number(payload.qty);
-    const unitCostNum = Number(payload.unitCost) || 0;
-    REKAGO.stockIn.unshift({
-      Date: payload.date || new Date().toISOString().slice(0, 10),
-      'Reference ID': payload.refId || '',
-      'SKU ID': payload.skuId,
-      'Item ID': payload.itemId,
-      'Supplier Name': payload.supplier || '',
-      'Qty In': qtyNum,
-      'Unit Cost (IDR)': unitCostNum,
-      'Total Cost (IDR)': qtyNum * unitCostNum,
-      'Type': payload.type || 'Restock',
-    });
-    applySandboxStockDelta(payload.skuId, qtyNum);
-    showToast('Stock In recorded (sandbox — not saved to a real sheet).');
-    renderStockInTable();
-    return;
-  }
-
-  const res = await apiPost('addStockIn', payload);
-  if (res.ok) {
-    showToast('Stock In recorded.');
-    await loadAllData();
-    renderStockInTable();
-  } else {
-    showToast(res.error || 'Error.', true);
-  }
+  const qtyNum      = Number(payload.qty);
+  const unitCostNum = Number(payload.unitCost) || 0;
+  REKAGO.stockIn.unshift({
+    Date: payload.date || new Date().toISOString().slice(0, 10),
+    'Reference ID': payload.refId || '',
+    'SKU ID': payload.skuId,
+    'Item ID': payload.itemId,
+    'Supplier Name': payload.supplier || '',
+    'Qty In': qtyNum,
+    'Unit Cost (IDR)': unitCostNum,
+    'Total Cost (IDR)': qtyNum * unitCostNum,
+    'Type': payload.type || 'Restock',
+  });
+  applySandboxStockDelta(payload.skuId, qtyNum);
+  showToast('Stock In recorded for this Sandbox session.');
+  renderStockInTable();
 }
 </script>

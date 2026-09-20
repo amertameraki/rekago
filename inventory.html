@@ -1,4 +1,4 @@
-<!-- inventory.html - read-only Inventory Management capability preview -->
+<!-- inventory.html - browser-only Inventory Management capability -->
 <main>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px">
     <div>
@@ -14,7 +14,7 @@
   <div class="demo-gate" id="inventoryImportPanel" style="display:none;align-items:flex-start">
     <div class="demo-gate-text" style="max-width:420px">
       <strong>Import Inventory Management data</strong>
-      <p>Paste a JSON array from getCatalogue, getProducts, or getStockSummary. This preview stores it only in this browser.</p>
+      <p>Paste a JSON array to inspect it in this Sandbox session. Refreshing restores the sample inventory.</p>
     </div>
     <div style="display:flex;gap:8px;flex:1;align-items:flex-start">
       <textarea class="form-input" id="inventoryJsonInput" rows="4" placeholder='[{"sku":"BLM-001","productName":"Rattan Placemat","availableStock":84}]'></textarea>
@@ -46,7 +46,7 @@
     <div class="metric-tile source">
       <span>Data Source</span>
       <strong id="inventoryMetricSource">Sample</strong>
-      <small id="inventoryMetricSourceNote">preview mode</small>
+      <small id="inventoryMetricSourceNote">browser-only sample data</small>
     </div>
   </div>
 
@@ -243,11 +243,10 @@
 </style>
 
 <script>
-const INVENTORY_STORAGE_KEY = 'rekago_inventory_preview_data';
 let inventoryProducts = [];
 let inventoryStatusFilter = '';
 let inventoryView = 'grid';
-let inventorySource = { label: 'Sample', note: 'preview mode' };
+let inventorySource = { label: 'Sandbox', note: 'browser-only sample data' };
 
 const INVENTORY_SAMPLE = [
   {
@@ -321,7 +320,6 @@ const INVENTORY_SAMPLE = [
 ];
 
 async function init_inventory() {
-  if (REKAGO.mode === 'live' && !REKAGO.skus.length) await loadAllData();
   const loaded = inventoryLoadData();
   inventoryProducts = loaded.rows;
   inventorySource = loaded.source;
@@ -330,46 +328,13 @@ async function init_inventory() {
 }
 
 function inventoryLoadData() {
-  if (hasLiveData() && REKAGO.skus.length) {
-    return {
-      rows: REKAGO.skus.map(inventoryNormalizeProduct),
-      source: {
-        label: REKAGO.mode === 'live' ? 'Live' : 'Sandbox',
-        note: REKAGO.mode === 'live' ? (REKAGO.email || 'Google Sheet') : 'not saved to a real sheet',
-      },
-    };
-  }
-
-  const saved = localStorage.getItem(INVENTORY_STORAGE_KEY);
-  if (!saved) {
-    return {
-      rows: INVENTORY_SAMPLE.map(inventoryNormalizeProduct),
-      source: {
-        label: 'Sample',
-        note: 'preview mode',
-      },
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-    return {
-      rows: inventoryNormalizeRows(parsed),
-      source: {
-        label: 'Imported',
-        note: 'browser preview',
-      },
-    };
-  } catch (e) {
-    localStorage.removeItem(INVENTORY_STORAGE_KEY);
-    return {
-      rows: INVENTORY_SAMPLE.map(inventoryNormalizeProduct),
-      source: {
-        label: 'Sample',
-        note: 'preview mode',
-      },
-    };
-  }
+  return {
+    rows: (REKAGO.skus.length ? REKAGO.skus : INVENTORY_SAMPLE).map(inventoryNormalizeProduct),
+    source: {
+      label: 'Sandbox',
+      note: 'browser-only sample data',
+    },
+  };
 }
 
 function inventoryNormalizeRows(payload) {
@@ -537,9 +502,8 @@ function inventoryImportJson() {
   try {
     const rows = inventoryNormalizeRows(JSON.parse(input.value));
     if (!rows.length) throw new Error('No rows');
-    localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(rows));
     inventoryProducts = rows;
-    inventorySource = { label: 'Imported', note: 'browser preview' };
+    inventorySource = { label: 'Imported', note: 'this Sandbox session only' };
     inventoryPopulateFilters();
     inventoryRender();
     showToast('Inventory data imported.');
@@ -549,14 +513,13 @@ function inventoryImportJson() {
 }
 
 function inventoryResetData() {
-  localStorage.removeItem(INVENTORY_STORAGE_KEY);
   document.getElementById('inventoryJsonInput').value = '';
   const loaded = inventoryLoadData();
   inventoryProducts = loaded.rows;
   inventorySource = loaded.source;
   inventoryPopulateFilters();
   inventoryRender();
-  showToast(hasLiveData() ? 'Inventory restored.' : 'Sample inventory restored.');
+  showToast('Sandbox inventory restored.');
 }
 
 function inventoryEscape(value) {

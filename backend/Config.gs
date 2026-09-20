@@ -70,10 +70,9 @@ const COL = {
 
 // ── Google Sign-In ─────────────────────────────────────────
 // OAuth Client ID (Web application) from Google Cloud Console →
-// APIs & Services → Credentials. Must match `googleClientId` in
-// the frontend's config.js. Used to verify Sign-In ID tokens so a
-// caller's email can no longer be spoofed by just typing it in.
-const GOOGLE_CLIENT_ID = '1068898361135-edullttdrgmci35rbse7h3pr8r1of0hr.apps.googleusercontent.com';
+// APIs & Services → Credentials. In a private deployment this must match the
+// private frontend configuration. It is deliberately a placeholder here.
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 
 // ── Sheet accessors ───────────────────────────────────────
 function getSpreadsheet() {
