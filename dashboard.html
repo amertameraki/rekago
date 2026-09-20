@@ -28,9 +28,9 @@
       <div style="font-size:11px;color:var(--muted)">SKU needs restock</div>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);border-left:3px solid var(--ok)">
-      <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:6px">Sold This Week</div>
+      <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:6px">Outbound Units</div>
       <div style="font-size:28px;font-weight:600;line-height:1;margin-bottom:4px" id="mSold">22</div>
-      <div style="font-size:11px;color:var(--muted)">units out</div>
+      <div style="font-size:11px;color:var(--muted)">all sample movements</div>
     </div>
   </div>
 
@@ -153,14 +153,14 @@ function init_dashboard() {
   // Metrics
   const items   = hasLiveData() ? REKAGO.items : [{},{},{},{},{}];
   const lowCount = skus.filter(s => s.status === 'Low Stock').length;
-  const soldQty  = hasLiveData()
-    ? REKAGO.stockOut.filter(r => r['Type'] === 'Sold').reduce((sum, r) => sum + Number(r['Qty Out']), 0)
+  const outboundQty = hasLiveData()
+    ? REKAGO.stockOut.reduce((sum, row) => sum + Number(row['Qty Out']), 0)
     : 22;
 
   document.getElementById('mSkus').textContent  = skus.length;
   document.getElementById('mItems').textContent = items.length;
   document.getElementById('mLow').textContent   = lowCount;
-  document.getElementById('mSold').textContent  = soldQty;
+  document.getElementById('mSold').textContent  = outboundQty;
   document.getElementById('lowBadge').textContent = lowCount + ' low';
 
   document.getElementById('dashMeta').textContent =

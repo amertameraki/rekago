@@ -261,8 +261,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="nav-tab" onclick="loadPage('inventory')">Inventory</button>
       <button class="nav-tab" onclick="loadPage('packinglists')">Packing Lists</button>
       <button class="nav-tab" onclick="loadPage('stockin')">Stock In</button>
-      <button class="nav-tab" onclick="loadPage('stockout')">Stock Out</button>
-      <button class="nav-tab" onclick="loadPage('salesorders')">Sales Orders</button>
+      <button class="nav-tab" onclick="loadPage('stockout')">Outbound</button>
     </div>
     <div class="nav-right">
       <button class="lang-btn active" onclick="setLang('en')">EN</button>
@@ -286,12 +285,12 @@ const REKAGO = {
   // The public build has one mode: an editable, browser-only Sandbox.
   // It contains no production endpoint, identity token, or business data.
   mode: 'sandbox', lang: 'en',
-  skus: [], items: [], stockIn: [], stockOut: [], salesOrders: [],
+  skus: [], items: [], stockIn: [], stockOut: [],
 };
 
 // Seed data for sandbox mode — a copy of the same numbers already shown
-// in the public Sandbox across the app (dashboard/products/stock in/stock
-// out/sales orders), just collected in one place so every page reads
+// in the public Sandbox across the app (dashboard/products/stock in/outbound),
+// just collected in one place so every page reads
 // consistent, cross-linked data once someone starts a sandbox session
 // (e.g. a product added on Products shows up in Stock In's dropdown).
 const SANDBOX_SEED = {
@@ -313,15 +312,9 @@ const SANDBOX_SEED = {
     { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Supplier Name':'Supplier Tekstil Bandung','Qty In':30,'Unit Cost (IDR)':9000,'Total Cost (IDR)':270000,'Type':'Initial Stock' },
   ],
   stockOut: [
-    { Date:'2026-05-23','Reference ID':'SO-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Channel':'TikTok Shop','Qty Out':6,'Total Revenue (IDR)':510000,'Type':'Sold' },
-    { Date:'2026-05-24','Reference ID':'SO-2026-002','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Channel':'Shopee','Qty Out':12,'Total Revenue (IDR)':540000,'Type':'Sold' },
-    { Date:'2026-05-22','Reference ID':'MKT-001','SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Channel':'Direct','Qty Out':4,'Total Revenue (IDR)':480000,'Type':'Sold' },
-  ],
-  salesOrders: [
-    { 'SO Number':'SO-2026-001',Date:'2026-05-23',Channel:'TikTok Shop','Customer Ref':'TTK-0482','Total Qty':6,'Total Revenue (IDR)':510000,Status:'Fulfilled' },
-    { 'SO Number':'SO-2026-002',Date:'2026-05-24',Channel:'Shopee','Customer Ref':'SHP-2291','Total Qty':12,'Total Revenue (IDR)':540000,Status:'Fulfilled' },
-    { 'SO Number':'SO-2026-003',Date:'2026-05-24',Channel:'Tokopedia','Customer Ref':'TOK-1182','Total Qty':10,'Total Revenue (IDR)':850000,Status:'Pending' },
-    { 'SO Number':'SO-2026-004',Date:'2026-05-22',Channel:'Direct','Customer Ref':'WA-ORDER','Total Qty':4,'Total Revenue (IDR)':480000,Status:'Fulfilled' },
+    { Date:'2026-05-23','Outbound Number':'OUT-2026-0001','Reference ID':'OUT-2026-0001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT',Channel:'Tokopedia','External Order':'TKP-0482',Destination:'Customer Delivery','Qty Out':6,'Unit Value (IDR)':85000,'Total Revenue (IDR)':510000,Type:'Sale',Notes:'' },
+    { Date:'2026-05-23','Outbound Number':'OUT-2026-0001','Reference ID':'OUT-2026-0001','SKU ID':'BLM-002','Item ID':'BLM-002-CRM',Channel:'Shopee','External Order':'SHP-2291',Destination:'Customer Delivery','Qty Out':12,'Unit Value (IDR)':45000,'Total Revenue (IDR)':540000,Type:'Sale',Notes:'' },
+    { Date:'2026-05-24','Outbound Number':'OUT-2026-0002','Reference ID':'OUT-2026-0002','SKU ID':'BLM-003','Item ID':'BLM-003-GFT',Channel:'', 'External Order':'',Destination:'Consignment Partner A','Qty Out':4,'Unit Value (IDR)':0,'Total Revenue (IDR)':0,Type:'Consignment Transfer',Notes:'Display stock allocation' },
   ],
 };
 
@@ -472,7 +465,6 @@ function resetSandboxState() {
   REKAGO.items       = SANDBOX_SEED.items.map(row => ({ ...row }));
   REKAGO.stockIn     = SANDBOX_SEED.stockIn.map(row => ({ ...row }));
   REKAGO.stockOut    = SANDBOX_SEED.stockOut.map(row => ({ ...row }));
-  REKAGO.salesOrders = SANDBOX_SEED.salesOrders.map(row => ({ ...row }));
 }
 
 // ============================================================
@@ -586,8 +578,8 @@ const TOUR_STEPS = [
     pos:    'below',
   },
   {
-    title:  'Stock In & Out',
-    body:   'Record every inbound delivery and outbound sale. Stock counts update automatically.',
+    title:  'Stock In & Outbound',
+    body:   'Record inbound deliveries and group sales, consignment transfers, or other stock movements under one outbound number.',
     target: () => document.querySelector('.nav-tab[onclick*="stockin"]'),
     pos:    'below',
   },

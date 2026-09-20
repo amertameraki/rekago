@@ -1,173 +1,356 @@
-<!-- stockout.html — loaded into #page-frame by index.html -->
+<!-- stockout.html — multi-line browser-only outbound workflow -->
 <main>
-  <div class="page-title">Stock Out</div>
+  <div class="page-title" style="margin-bottom:2px">Outbound Transactions</div>
+  <div class="page-meta">Record sales, consignment transfers, samples, damage, and other inventory leaving the business.</div>
 
   <div class="form-section" id="stockOutSection">
-    <div class="form-section-title">Record Stock Out</div>
+    <div class="outbound-section-head">
+      <div>
+        <div class="form-section-title" style="margin:0;border:0;padding:0">New Outbound Transaction</div>
+        <div class="outbound-sub">One outbound number can contain multiple SKUs and external marketplace orders.</div>
+      </div>
+      <span class="status-pill low-stock">Browser Only</span>
+    </div>
+
     <div class="form-grid form-grid-4">
       <div class="form-field">
+        <label class="form-label">Outbound Number</label>
+        <input class="form-input mono" id="outboundNumber" readonly>
+      </div>
+      <div class="form-field">
         <label class="form-label">Date</label>
-        <input class="form-input" id="soDate" type="date">
+        <input class="form-input" id="outboundDate" type="date" onchange="refreshOutboundNumber()">
       </div>
       <div class="form-field">
-        <label class="form-label">Reference ID</label>
-        <input class="form-input" id="soRefId" placeholder="SO-2026-010">
-      </div>
-      <div class="form-field">
-        <label class="form-label">SKU</label>
-        <select class="form-select" id="soSkuId" onchange="populateSoItems()"></select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Item</label>
-        <select class="form-select" id="soItemId"></select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Channel</label>
-        <select class="form-select" id="soChannel">
-          <option>Tokopedia</option>
-          <option>Shopee</option>
-          <option>TikTok Shop</option>
-          <option>Direct</option>
-        </select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Order Reference</label>
-        <input class="form-input" id="soOrderRef" placeholder="e.g. TTK-0500">
-      </div>
-      <div class="form-field">
-        <label class="form-label">Qty Out</label>
-        <input class="form-input" id="soQty" type="number" placeholder="0" min="1">
-      </div>
-      <div class="form-field">
-        <label class="form-label">Unit Price (IDR)</label>
-        <input class="form-input" id="soUnitPrice" type="number" placeholder="0">
-      </div>
-      <div class="form-field">
-        <label class="form-label">Type</label>
-        <select class="form-select" id="soType">
-          <option>Sold</option>
+        <label class="form-label">Movement Type</label>
+        <select class="form-select" id="outboundType">
+          <option>Sale</option>
+          <option>Consignment Transfer</option>
           <option>Marketing Sample</option>
           <option>Damaged</option>
-          <option>Return Inbound</option>
+          <option>Internal Use</option>
+          <option>Return to Supplier</option>
+          <option>Inventory Adjustment (Out)</option>
         </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Destination / Consignee</label>
+        <input class="form-input" id="outboundDestination" maxlength="100" placeholder="Optional">
       </div>
       <div class="form-field full">
         <label class="form-label">Notes</label>
-        <input class="form-input" id="soNotes" placeholder="Optional">
+        <input class="form-input" id="outboundNotes" maxlength="250" placeholder="Optional">
       </div>
     </div>
+
+    <div class="outbound-lines">
+      <div class="outbound-line-form">
+        <div class="form-field">
+          <label class="form-label">SKU</label>
+          <select class="form-select" id="outboundSku" onchange="updateOutboundSelection()"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Item / Variant</label>
+          <select class="form-select" id="outboundItem"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Qty</label>
+          <input class="form-input" id="outboundQty" type="number" min="1" step="1" placeholder="1">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Channel</label>
+          <select class="form-select" id="outboundChannel">
+            <option value="">No channel</option>
+            <option>Tokopedia</option>
+            <option>Shopee</option>
+            <option>TikTok Shop</option>
+            <option>Direct</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">External Order</label>
+          <input class="form-input" id="outboundOrderRef" maxlength="80" placeholder="Optional">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Unit Value (IDR)</label>
+          <input class="form-input" id="outboundUnitValue" type="number" min="0" placeholder="Optional">
+        </div>
+        <button class="btn-primary outbound-add-btn" onclick="addOutboundLine()">Add Line</button>
+      </div>
+      <div class="outbound-availability" id="outboundAvailability"></div>
+
+      <div class="outbound-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SKU / Item</th>
+              <th>Product</th>
+              <th>Channel</th>
+              <th>External Order</th>
+              <th>Qty</th>
+              <th>Unit Value</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="outboundDraftBody"></tbody>
+        </table>
+      </div>
+      <div class="outbound-totals">
+        <span>Total Lines: <strong id="outboundLineCount">0</strong></span>
+        <span>Total Qty: <strong id="outboundTotalQty">0</strong></span>
+        <span>Total Value: <strong id="outboundTotalValue">Rp 0</strong></span>
+      </div>
+    </div>
+
     <div class="form-actions">
-      <button class="btn-primary" id="recordStockOutButton" onclick="submitStockOut()">Record Stock Out</button>
+      <button class="btn-primary" id="recordStockOutButton" onclick="submitOutbound()">Record Outbound</button>
+      <button class="btn-secondary" onclick="clearOutboundDraft()">Clear</button>
     </div>
   </div>
 
   <div class="card">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Ref ID</th>
-          <th>SKU</th>
-          <th>Item</th>
-          <th>Channel</th>
-          <th>Qty</th>
-          <th>Revenue</th>
-          <th>Type</th>
-        </tr>
-      </thead>
-      <tbody id="stockOutBody"></tbody>
-    </table>
+    <div class="card-header">
+      <span class="card-label">Outbound History</span>
+      <span class="page-meta" id="outboundHistoryMeta"></span>
+    </div>
+    <div class="outbound-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Outbound</th>
+            <th>Date</th>
+            <th>Type</th>
+            <th>SKU / Item</th>
+            <th>Channel / Order</th>
+            <th>Destination</th>
+            <th>Qty</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="stockOutBody"></tbody>
+      </table>
+    </div>
   </div>
 </main>
 
-<script>
-const SO_MOCK = [
-  { Date:'2026-05-23','Reference ID':'SO-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Channel':'TikTok Shop','Qty Out':6, 'Total Revenue (IDR)':510000,'Type':'Sold' },
-  { Date:'2026-05-24','Reference ID':'SO-2026-002','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Channel':'Shopee',     'Qty Out':12,'Total Revenue (IDR)':540000,'Type':'Sold' },
-  { Date:'2026-05-22','Reference ID':'MKT-001',    'SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Channel':'Direct',     'Qty Out':4, 'Total Revenue (IDR)':480000,'Type':'Sold' },
-];
+<style>
+.outbound-section-head { align-items:flex-start; display:flex; justify-content:space-between; gap:18px; margin-bottom:18px; }
+.outbound-sub { color:var(--muted); font-size:11px; margin-top:3px; }
+.outbound-lines { border-top:1px solid var(--border); margin-top:18px; padding-top:18px; }
+.outbound-line-form { align-items:end; display:grid; gap:12px; grid-template-columns:1.1fr 1.2fr .55fr .85fr .9fr .8fr auto; }
+.outbound-add-btn { height:35px; white-space:nowrap; }
+.outbound-availability { color:var(--muted); font-size:11px; margin:8px 0 12px; }
+.outbound-table-wrap { overflow-x:auto; }
+.outbound-totals { display:flex; gap:22px; justify-content:flex-end; padding:12px 4px 0; color:var(--muted); font-size:12px; }
+.outbound-totals strong { color:var(--text); }
+.outbound-remove { background:none; border:1px solid rgba(192,57,43,.16); border-radius:5px; color:var(--danger); font-size:11px; font-weight:700; padding:4px 9px; }
+.outbound-detail { color:var(--muted); font-size:10px; margin-top:2px; }
+@media (max-width:1100px) { .outbound-line-form { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:720px) {
+  .outbound-line-form, .form-grid-4 { grid-template-columns:1fr; }
+  .outbound-section-head, .outbound-totals { align-items:flex-start; flex-direction:column; }
+}
+</style>
 
-const ITEMS_MOCK_SO = [
-  { 'SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Item Name':'Rattan Placemat — Natural' },
-  { 'SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Item Name':'Rattan Placemat — Dark' },
-  { 'SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Item Name':'Linen Napkin — Cream' },
-  { 'SKU ID':'BLM-002','Item ID':'BLM-002-SND','Item Name':'Linen Napkin — Sand' },
-  { 'SKU ID':'BLM-003','Item ID':'BLM-003-GFT','Item Name':'Rattan + Napkin Gift Set' },
-];
+<script>
+let outboundLines = [];
 
 function init_stockout() {
-  lockDemoWriteForm('stockOutSection', 'recordStockOutButton');
-  document.getElementById('soDate').value = new Date().toISOString().slice(0, 10);
-  populateSoSkus();
+  document.getElementById('outboundDate').value = new Date().toISOString().slice(0, 10);
+  populateOutboundSkus();
+  refreshOutboundNumber();
+  renderOutboundDraft();
   renderStockOutTable();
 }
 
-function populateSoSkus() {
-  const skus = hasLiveData() ? REKAGO.skus : [
-    { 'SKU ID':'BLM-001','SKU Name':'Rattan Placemat' },
-    { 'SKU ID':'BLM-002','SKU Name':'Linen Napkin' },
-    { 'SKU ID':'BLM-003','SKU Name':'Rattan + Napkin Set' },
-  ];
-  document.getElementById('soSkuId').innerHTML =
-    skus.map(s => `<option value="${escapeHtml(s['SKU ID'])}">${escapeHtml(s['SKU ID'])} — ${escapeHtml(s['SKU Name'])}</option>`).join('');
-  populateSoItems();
+function populateOutboundSkus() {
+  document.getElementById('outboundSku').innerHTML = REKAGO.skus
+    .map(sku => `<option value="${escapeHtml(sku['SKU ID'])}">${escapeHtml(sku['SKU ID'])} — ${escapeHtml(sku['SKU Name'])}</option>`)
+    .join('');
+  updateOutboundSelection();
 }
 
-function populateSoItems() {
-  const skuId = document.getElementById('soSkuId').value;
-  const items = hasLiveData() ? REKAGO.items : ITEMS_MOCK_SO;
-  document.getElementById('soItemId').innerHTML =
-    items.filter(i => i['SKU ID'] === skuId)
-         .map(i => `<option value="${escapeHtml(i['Item ID'])}">${escapeHtml(i['Item ID'])} — ${escapeHtml(i['Item Name'])}</option>`)
-         .join('');
+function updateOutboundSelection() {
+  const skuId = document.getElementById('outboundSku').value;
+  const items = REKAGO.items.filter(item => item['SKU ID'] === skuId);
+  document.getElementById('outboundItem').innerHTML = items.length
+    ? items.map(item => `<option value="${escapeHtml(item['Item ID'])}">${escapeHtml(item['Item ID'])} — ${escapeHtml(item['Item Name'])}</option>`).join('')
+    : '<option value="">No item / variant available</option>';
+  const sku = REKAGO.skus.find(row => row['SKU ID'] === skuId);
+  document.getElementById('outboundUnitValue').value = sku ? Number(sku['Unit Price (IDR)']) || '' : '';
+  renderOutboundAvailability();
+}
+
+function renderOutboundAvailability() {
+  const skuId = document.getElementById('outboundSku').value;
+  const sku = REKAGO.skus.find(row => row['SKU ID'] === skuId);
+  const physical = sku ? Number(sku['Current Stock']) || 0 : 0;
+  const drafted = outboundLines.filter(line => line.skuId === skuId).reduce((sum, line) => sum + line.qty, 0);
+  document.getElementById('outboundAvailability').textContent = sku
+    ? `${sku['SKU Name']}: ${physical} physical · ${Math.max(0, physical - drafted)} available for this draft.`
+    : 'Select a product to see available physical stock.';
+}
+
+function refreshOutboundNumber() {
+  document.getElementById('outboundNumber').value = generateOutboundNumber();
+}
+
+function generateOutboundNumber() {
+  const date = document.getElementById('outboundDate').value || new Date().toISOString().slice(0, 10);
+  const year = date.slice(0, 4);
+  const pattern = new RegExp(`^OUT-${year}-(\\d{4})$`);
+  const max = REKAGO.stockOut.reduce((highest, row) => {
+    const match = String(row['Outbound Number'] || row['Reference ID'] || '').match(pattern);
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 0);
+  return `OUT-${year}-${String(max + 1).padStart(4, '0')}`;
+}
+
+function addOutboundLine() {
+  const skuId = document.getElementById('outboundSku').value;
+  const itemId = document.getElementById('outboundItem').value;
+  const qty = Number(document.getElementById('outboundQty').value);
+  const unitValue = Number(document.getElementById('outboundUnitValue').value) || 0;
+  const sku = REKAGO.skus.find(row => row['SKU ID'] === skuId);
+  const item = REKAGO.items.find(row => row['Item ID'] === itemId && row['SKU ID'] === skuId);
+
+  if (!sku) { showToast('Select a valid SKU.', true); return; }
+  if (!item) { showToast('Select a valid Item / Variant.', true); return; }
+  if (!Number.isInteger(qty) || qty < 1) { showToast('Qty must be a positive whole number.', true); return; }
+  if (unitValue < 0) { showToast('Unit value cannot be negative.', true); return; }
+
+  const drafted = outboundLines.filter(line => line.skuId === skuId).reduce((sum, line) => sum + line.qty, 0);
+  const physical = Number(sku['Current Stock']) || 0;
+  if (drafted + qty > physical) {
+    showToast(`Only ${Math.max(0, physical - drafted)} units of ${skuId} remain available for this draft.`, true);
+    return;
+  }
+
+  outboundLines.push({
+    skuId,
+    itemId,
+    productName: sku['SKU Name'],
+    itemName: item['Item Name'],
+    qty,
+    channel: document.getElementById('outboundChannel').value,
+    externalOrder: document.getElementById('outboundOrderRef').value.trim(),
+    unitValue,
+  });
+  document.getElementById('outboundQty').value = '';
+  document.getElementById('outboundOrderRef').value = '';
+  renderOutboundDraft();
+  renderOutboundAvailability();
+}
+
+function removeOutboundLine(index) {
+  outboundLines.splice(index, 1);
+  renderOutboundDraft();
+  renderOutboundAvailability();
+}
+
+function renderOutboundDraft() {
+  document.getElementById('outboundDraftBody').innerHTML = outboundLines.length
+    ? outboundLines.map((line, index) => `<tr>
+        <td><span class="mono">${escapeHtml(line.skuId)}</span><div class="outbound-detail">${escapeHtml(line.itemId)}</div></td>
+        <td>${escapeHtml(line.productName)}<div class="outbound-detail">${escapeHtml(line.itemName)}</div></td>
+        <td>${line.channel ? channelPill(line.channel) : '-'}</td>
+        <td>${escapeHtml(line.externalOrder || '-')}</td>
+        <td>${line.qty.toLocaleString('id-ID')}</td>
+        <td>${formatRp(line.unitValue)}</td>
+        <td>${formatRp(line.qty * line.unitValue)}</td>
+        <td><button class="outbound-remove" onclick="removeOutboundLine(${index})">Remove</button></td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="8">Add one or more outbound lines</td></tr>';
+  document.getElementById('outboundLineCount').textContent = outboundLines.length;
+  document.getElementById('outboundTotalQty').textContent = outboundLines.reduce((sum, line) => sum + line.qty, 0).toLocaleString('id-ID');
+  document.getElementById('outboundTotalValue').textContent = formatRp(outboundLines.reduce((sum, line) => sum + line.qty * line.unitValue, 0));
+}
+
+function submitOutbound() {
+  if (!outboundLines.length) { showToast('Add at least one outbound line.', true); return; }
+
+  const number = document.getElementById('outboundNumber').value;
+  if (REKAGO.stockOut.some(row => (row['Outbound Number'] || row['Reference ID']) === number)) {
+    showToast(`Outbound number already exists: ${number}`, true);
+    return;
+  }
+
+  const totalsBySku = outboundLines.reduce((totals, line) => {
+    totals[line.skuId] = (totals[line.skuId] || 0) + line.qty;
+    return totals;
+  }, {});
+  for (const [skuId, qty] of Object.entries(totalsBySku)) {
+    const sku = REKAGO.skus.find(row => row['SKU ID'] === skuId);
+    const physical = sku ? Number(sku['Current Stock']) || 0 : 0;
+    if (!sku || qty > physical) {
+      showToast(`Insufficient physical stock for ${skuId}. Nothing was recorded.`, true);
+      return;
+    }
+  }
+
+  const date = document.getElementById('outboundDate').value || new Date().toISOString().slice(0, 10);
+  const type = document.getElementById('outboundType').value;
+  const destination = document.getElementById('outboundDestination').value.trim();
+  const notes = document.getElementById('outboundNotes').value.trim();
+  const rows = outboundLines.map(line => ({
+    Date: date,
+    'Outbound Number': number,
+    'Reference ID': number,
+    'SKU ID': line.skuId,
+    'Item ID': line.itemId,
+    Channel: line.channel,
+    'External Order': line.externalOrder,
+    Destination: destination,
+    'Qty Out': line.qty,
+    'Unit Value (IDR)': line.unitValue,
+    'Total Revenue (IDR)': line.qty * line.unitValue,
+    Type: type,
+    Notes: notes,
+  }));
+
+  REKAGO.stockOut = rows.concat(REKAGO.stockOut);
+  Object.entries(totalsBySku).forEach(([skuId, qty]) => applySandboxStockDelta(skuId, -qty));
+  outboundLines = [];
+  document.getElementById('outboundDestination').value = '';
+  document.getElementById('outboundNotes').value = '';
+  renderOutboundDraft();
+  renderStockOutTable();
+  refreshOutboundNumber();
+  renderOutboundAvailability();
+  showToast(`${number} recorded with ${rows.length} line${rows.length === 1 ? '' : 's'}.`);
+}
+
+function clearOutboundDraft() {
+  outboundLines = [];
+  document.getElementById('outboundDestination').value = '';
+  document.getElementById('outboundNotes').value = '';
+  document.getElementById('outboundQty').value = '';
+  document.getElementById('outboundOrderRef').value = '';
+  renderOutboundDraft();
+  renderOutboundAvailability();
 }
 
 function renderStockOutTable() {
-  const rows = hasLiveData() ? REKAGO.stockOut : SO_MOCK;
+  const rows = REKAGO.stockOut;
+  const transactionCount = new Set(rows.map(row => row['Outbound Number'] || row['Reference ID'])).size;
+  document.getElementById('outboundHistoryMeta').textContent = `${transactionCount} transactions · ${rows.length} lines`;
   document.getElementById('stockOutBody').innerHTML = rows.length
-    ? rows.map(r => `<tr>
-        <td>${escapeHtml(r.Date)}</td>
-        <td><span class="mono">${escapeHtml(r['Reference ID'])}</span></td>
-        <td><span class="mono">${escapeHtml(r['SKU ID'])}</span></td>
-        <td>${escapeHtml(r['Item ID'])}</td>
-        <td>${channelPill(r['Channel'])}</td>
-        <td>${escapeHtml(r['Qty Out'])}</td>
-        <td>${formatRp(r['Total Revenue (IDR)'])}</td>
-        <td>${escapeHtml(r['Type'])}</td>
-      </tr>`).join('')
-    : '<tr class="empty-row"><td colspan="8">No records yet</td></tr>';
-}
-
-async function submitStockOut() {
-  if (!requireEditable()) return;
-  const payload = {
-    date:       document.getElementById('soDate').value,
-    refId:      document.getElementById('soRefId').value,
-    skuId:      document.getElementById('soSkuId').value,
-    itemId:     document.getElementById('soItemId').value,
-    channel:    document.getElementById('soChannel').value,
-    orderRef:   document.getElementById('soOrderRef').value,
-    qty:        document.getElementById('soQty').value,
-    unitPrice:  document.getElementById('soUnitPrice').value,
-    type:       document.getElementById('soType').value,
-    notes:      document.getElementById('soNotes').value,
-  };
-  if (!payload.qty || Number(payload.qty) < 1) { showToast('Qty must be at least 1.', true); return; }
-
-  const qtyNum        = Number(payload.qty);
-  const unitPriceNum  = Number(payload.unitPrice) || 0;
-  REKAGO.stockOut.unshift({
-    Date: payload.date || new Date().toISOString().slice(0, 10),
-    'Reference ID': payload.refId || '',
-    'SKU ID': payload.skuId,
-    'Item ID': payload.itemId,
-    'Channel': payload.channel || '',
-    'Qty Out': qtyNum,
-    'Total Revenue (IDR)': qtyNum * unitPriceNum,
-    'Type': payload.type || 'Sold',
-  });
-  if (payload.type !== 'Return Inbound') applySandboxStockDelta(payload.skuId, -qtyNum);
-  showToast('Stock Out recorded for this Sandbox session.');
-  renderStockOutTable();
+    ? rows.map(row => {
+        const number = row['Outbound Number'] || row['Reference ID'] || '-';
+        const channelOrder = [row.Channel, row['External Order']].filter(Boolean).join(' · ') || '-';
+        return `<tr>
+          <td><span class="mono">${escapeHtml(number)}</span></td>
+          <td>${escapeHtml(row.Date)}</td>
+          <td>${escapeHtml(row.Type)}</td>
+          <td><span class="mono">${escapeHtml(row['SKU ID'])}</span><div class="outbound-detail">${escapeHtml(row['Item ID'])}</div></td>
+          <td>${escapeHtml(channelOrder)}</td>
+          <td>${escapeHtml(row.Destination || '-')}</td>
+          <td>${Number(row['Qty Out']).toLocaleString('id-ID')}</td>
+          <td>${formatRp(row['Total Revenue (IDR)'])}</td>
+        </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="8">No outbound transactions yet</td></tr>';
 }
 </script>

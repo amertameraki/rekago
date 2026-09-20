@@ -36,8 +36,7 @@ is a separate HTML fragment loaded into `#page-frame`:
 | `inventory.html` | Inventory grid/table and session-only JSON preview |
 | `packinglists.html` | Browser-only packing-list workflow |
 | `stockin.html` | Session-only inbound stock movements |
-| `stockout.html` | Session-only outbound stock movements |
-| `salesorders.html` | Session-only sales-order creation |
+| `stockout.html` | Multi-line outbound transactions with optional channel and order references |
 
 Shared state is held in `REKAGO` inside `index.html`. Product and stock changes
 are cross-linked during the session. No browser action calls `backend/`.
@@ -64,4 +63,5 @@ are maintained separately and are not part of this public runtime.
 
 See [`docs/maintenance-checklist.md`](docs/maintenance-checklist.md) for the
 release checks and [`docs/packing-lists-contract.md`](docs/packing-lists-contract.md)
-for the reference receive-to-stock contract.
+for the reference receive-to-stock contract. The public inventory-first model
+is documented in [`docs/outbound-transactions.md`](docs/outbound-transactions.md).

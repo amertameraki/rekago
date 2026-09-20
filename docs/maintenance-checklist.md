@@ -10,8 +10,10 @@ The public runtime is browser-only. Before every public Preview deployment:
 
 - [ ] The app opens directly in editable Sandbox mode without sign-in.
 - [ ] Refreshing restores the fixed sample data.
-- [ ] Add Product, Stock In, Stock Out, Sales Order, and Packing List actions
-      work within the current session.
+- [ ] Add Product, Stock In, multi-line Outbound, and Packing List actions work
+      within the current session.
+- [ ] One outbound number can contain lines from different channels/orders;
+      invalid or insufficient-stock batches make no stock changes.
 - [ ] Browser network logs contain no request to Google Apps Script, Google
       Identity, a production API, or a customer data source.
 - [ ] The frontend contains no deployed endpoint, OAuth client ID, identity
