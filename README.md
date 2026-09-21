@@ -36,13 +36,13 @@ is a separate HTML fragment loaded into `#page-frame`:
 | `dashboard.html` | Operational summary and sample charts |
 | `products.html` | Product catalog and new-SKU form |
 | `inventory.html` | Inventory grid/table and session-only JSON preview |
-| `packinglists.html` | Browser-only packing-list workflow |
+| `packinglists.html` | Browser-only simplified Purchase Order workflow |
 | `stockin.html` | Session-only inbound stock movements |
 | `stockout.html` | Multi-line outbound transactions with optional channel and order references |
 | `ledger.html` | Read-only unified movement history with per-SKU running balances |
 
 Shared state is held in `REKAGO` inside `index.html`. Product and stock changes
-are cross-linked during the session. Packing List receipt creates matching
+are cross-linked during the session. Purchase Order receipt creates matching
 Inbound rows and increases physical stock exactly once. The Inventory Ledger
 combines Inbound and Outbound lines, links them to their source workflow, and
 reconciles their running balances to current physical stock. No browser action

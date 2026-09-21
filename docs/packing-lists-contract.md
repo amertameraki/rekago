@@ -3,6 +3,11 @@
 > **Terminology:** The public interface calls incoming inventory **Inbound**.
 > Existing internal code, API actions, column names, and the Google Sheet tab
 > retain **Stock In** for compatibility.
+>
+> The public Sandbox calls this simplified full-receipt workflow **Purchase
+> Orders** and uses dummy `PO-...` references. Existing private backend code,
+> API actions, Sheet tabs, and stored `PL-...` references retain **Packing
+> Lists** until a separately planned purchase-order migration.
 
 Status: the authenticated receive-to-stock contract is retained here as a
 reference implementation. The public Sandbox exercises a browser-only version

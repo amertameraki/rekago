@@ -1,13 +1,13 @@
-<!-- packinglists.html - browser-only inbound packing list workflow -->
+<!-- packinglists.html - browser-only simplified purchase order workflow -->
 <main>
   <div>
-    <div class="page-title" style="margin-bottom:2px">Packing Lists</div>
-    <div class="page-meta" id="plMeta">Supplier inbound shipments</div>
+    <div class="page-title" style="margin-bottom:2px">Purchase Orders</div>
+    <div class="page-meta" id="plMeta">Simple supplier orders with full receipt only</div>
   </div>
 
   <div class="pl-metrics">
     <div class="pl-metric">
-      <span>Open Lists</span>
+      <span>Open Orders</span>
       <strong id="plOpenCount">0</strong>
       <small>not yet received</small>
     </div>
@@ -31,16 +31,16 @@
   <div class="form-section">
     <div class="pl-section-head">
       <div>
-        <div class="form-section-title" style="margin:0;border:0;padding:0">New Packing List</div>
-        <div class="pl-sub">Build an inbound shipment from supplier lines, then receive it into stock once it arrives.</div>
+        <div class="form-section-title" style="margin:0;border:0;padding:0">New Purchase Order</div>
+        <div class="pl-sub">Build a supplier order, then receive the full order into Inbound once it arrives. Partial receiving is not included in this Sandbox.</div>
       </div>
       <span class="status-pill low-stock" id="plModeBadge">Browser Only</span>
     </div>
 
     <div class="form-grid form-grid-4">
       <div class="form-field">
-        <label class="form-label">PL Number</label>
-        <input class="form-input" id="plNumber" placeholder="PL-2026-005">
+        <label class="form-label">PO Number</label>
+        <input class="form-input" id="plNumber" placeholder="PO-2026-005">
       </div>
       <div class="form-field">
         <label class="form-label">Date</label>
@@ -105,13 +105,13 @@
     </div>
 
     <div class="form-actions">
-      <button class="btn-primary" onclick="plCreateList()">Create Packing List</button>
+      <button class="btn-primary" onclick="plCreateList()">Create Purchase Order</button>
       <button class="btn-secondary" onclick="plClearDraft()">Clear</button>
     </div>
   </div>
 
   <div class="filter-bar">
-    <input class="search-input" id="plSearch" placeholder="Search packing lists..." oninput="plRenderLists()">
+    <input class="search-input" id="plSearch" placeholder="Search purchase orders..." oninput="plRenderLists()">
     <button class="cat-pill active" onclick="plSetStatusFilter('', this)">All</button>
     <button class="cat-pill" onclick="plSetStatusFilter('Draft', this)">Draft</button>
     <button class="cat-pill" onclick="plSetStatusFilter('In Transit', this)">In Transit</button>
@@ -122,7 +122,7 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>PL Number</th>
+          <th>PO Number</th>
           <th>Date</th>
           <th>Supplier</th>
           <th>Lines</th>
@@ -277,7 +277,7 @@ async function init_packinglists() {
 
 function plNormalizeList(row) {
   return {
-    number: String(row.number ?? row.plNumber ?? row['PL Number'] ?? '').trim(),
+    number: String(row.number ?? row.poNumber ?? row['PO Number'] ?? row.plNumber ?? row['PL Number'] ?? '').trim(),
     date: String(row.date ?? row.Date ?? '').trim(),
     supplier: String(row.supplier ?? row['Supplier Name'] ?? row.Supplier ?? '').trim(),
     status: String(row.status ?? row.Status ?? 'Draft').trim(),
@@ -405,9 +405,9 @@ function plRenderLines() {
 
 async function plCreateList() {
   const number = document.getElementById('plNumber').value.trim();
-  if (!number) { showToast('PL Number is required.', true); return; }
-  if (!plLines.length) { showToast('Add at least one packing list line.', true); return; }
-  if (plLists.some(pl => pl.number === number)) { showToast('PL Number already exists.', true); return; }
+  if (!number) { showToast('PO Number is required.', true); return; }
+  if (!plLines.length) { showToast('Add at least one purchase order line.', true); return; }
+  if (plLists.some(pl => pl.number === number)) { showToast('PO Number already exists.', true); return; }
 
   const packingList = {
     number,
@@ -422,7 +422,7 @@ async function plCreateList() {
   plLists = REKAGO.packingLists;
   plClearDraft();
   plRenderLists();
-  showToast('Packing List created for this Sandbox session.');
+  showToast('Purchase Order created for this Sandbox session.');
 }
 
 function plClearDraft() {
@@ -457,7 +457,7 @@ function plRenderLists() {
         const actionButtons = terminal
           ? ''
           : pl.recovered
-            ? '<button class="btn-cancel" disabled title="Create a Packing Lists header first">Needs Header</button>'
+            ? '<button class="btn-cancel" disabled title="Create a Purchase Order header first">Needs Header</button>'
             : `<div class="pl-row-actions">${receiveButton}<button class="btn-cancel" data-pl-number="${plEscape(pl.number)}" onclick="plCancel(this.dataset.plNumber)">Cancel</button></div>`;
         return `<tr>
           <td><span class="mono">${plEscape(pl.number)}</span></td>
@@ -470,7 +470,7 @@ function plRenderLists() {
           <td style="text-align:right">${actionButtons}</td>
         </tr>`;
       }).join('')
-    : '<tr class="empty-row"><td colspan="8">No packing lists found</td></tr>';
+    : '<tr class="empty-row"><td colspan="8">No purchase orders found</td></tr>';
   plRenderMetrics();
 }
 
@@ -484,12 +484,12 @@ function plRenderMetrics() {
   document.getElementById('plInboundUnits').textContent = inbound.toLocaleString('id-ID');
   document.getElementById('plReceivedUnits').textContent = received.toLocaleString('id-ID');
   document.getElementById('plWriteMode').textContent = 'Sandbox';
-  document.getElementById('plMeta').textContent = `${plLists.length} packing lists tracked`;
+  document.getElementById('plMeta').textContent = `${plLists.length} purchase orders tracked`;
 }
 
 function plReceive(number) {
   const list = REKAGO.packingLists.find(pl => pl.number === number);
-  if (!list) { showToast('Packing List not found.', true); return; }
+  if (!list) { showToast('Purchase Order not found.', true); return; }
   if (!['Draft', 'In Transit'].includes(list.status)) {
     showToast(`${number} cannot be received from status ${list.status}.`, true);
     return;
@@ -540,7 +540,7 @@ function plReceive(number) {
     'Unit Cost (IDR)': line.unitCost,
     'Total Cost (IDR)': line.qty * line.unitCost,
     Type: 'Restock',
-    Notes: `Received from Packing List ${number}`,
+    Notes: `Received from Purchase Order ${number}`,
   }));
   const nextSkus = REKAGO.skus.map(sku => ({ ...sku }));
   Object.entries(qtyBySku).forEach(([skuId, qty]) => {
@@ -566,7 +566,7 @@ function plReceive(number) {
 
 function plCancel(number) {
   const list = REKAGO.packingLists.find(pl => pl.number === number);
-  if (!list) { showToast('Packing List not found.', true); return; }
+  if (!list) { showToast('Purchase Order not found.', true); return; }
   if (!['Draft', 'In Transit'].includes(list.status)) {
     showToast(`${number} cannot be cancelled from status ${list.status}.`, true);
     return;

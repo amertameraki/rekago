@@ -46,16 +46,16 @@ button { cursor: pointer; font-family: inherit; }
 input, select, textarea { font-family: inherit; font-size: 13px; }
 
 /* NAV */
-nav { background: var(--nav); display: flex; align-items: center; padding: 0 24px; height: 48px; gap: 32px; position: sticky; top: 0; z-index: 100; }
+nav { background: var(--nav); display: flex; align-items: center; padding: 0 24px; height: 48px; gap: 18px; position: sticky; top: 0; z-index: 100; }
 .nav-brand { display: flex; flex-direction: column; line-height: 1.1; min-width: 110px; }
 .nav-brand-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--gold); letter-spacing: -0.3px; }
 .nav-brand-sub { font-size: 9px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(242,187,22,0.45); }
 .nav-tabs { display: flex; gap: 2px; flex: 1; justify-content: center; }
-.nav-tab { background: none; border: none; color: rgba(242,187,22,0.55); font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 6px; transition: color 0.15s, background 0.15s; white-space: nowrap; }
+.nav-tab { background: none; border: none; color: rgba(242,187,22,0.55); font-size: 13px; font-weight: 500; padding: 6px 8px; border-radius: 6px; transition: color 0.15s, background 0.15s; white-space: nowrap; }
 .nav-tab:hover { color: var(--gold); background: rgba(242,187,22,0.07); }
 .nav-tab.active { color: var(--nav); background: var(--gold); font-weight: 600; }
-.nav-right { display: flex; align-items: center; gap: 10px; min-width: 220px; justify-content: flex-end; position: relative; }
-.lang-btn { background: none; border: none; color: rgba(242,187,22,0.5); font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 4px; transition: color 0.15s; }
+.nav-right { display: flex; align-items: center; gap: 6px; min-width: 220px; justify-content: flex-end; position: relative; }
+.lang-btn { background: none; border: none; color: rgba(242,187,22,0.5); font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 4px; transition: color 0.15s; white-space: nowrap; }
 .lang-btn:hover, .lang-btn.active { color: var(--gold); }
 .language-note { position: absolute; top: 48px; right: 110px; width: 220px; padding: 10px 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(64,57,25,0.16); font-size: 11px; line-height: 1.45; opacity: 0; transform: translateY(-5px); pointer-events: none; transition: all 0.2s ease; z-index: 20; }
 .language-note.show { opacity: 1; transform: translateY(0); }
@@ -262,7 +262,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="nav-tab active" onclick="loadPage('dashboard')">Dashboard</button>
       <button class="nav-tab" onclick="loadPage('products')">Products</button>
       <button class="nav-tab" onclick="loadPage('inventory')">Inventory</button>
-      <button class="nav-tab" onclick="loadPage('packinglists')">Packing Lists</button>
+      <button class="nav-tab" onclick="loadPage('packinglists')">Purchase Orders</button>
       <button class="nav-tab" onclick="loadPage('stockin')">Inbound</button>
       <button class="nav-tab" onclick="loadPage('stockout')">Outbound</button>
       <button class="nav-tab" onclick="loadPage('ledger')">Ledger</button>
@@ -316,7 +316,7 @@ const SANDBOX_SEED = {
   ],
   packingLists: [
     {
-      number:'PL-2026-001', date:'2026-05-20', supplier:'Supplier Rattan Jakarta',
+      number:'PO-2026-001', date:'2026-05-20', supplier:'Supplier Rattan Jakarta',
       status:'Received', notes:'Initial May restock',
       lines:[
         { sku:'BLM-001', itemId:'BLM-001-NAT', productName:'Rattan Placemat', itemName:'Rattan Placemat — Natural', qty:40, unitCost:22000 },
@@ -324,7 +324,7 @@ const SANDBOX_SEED = {
       ],
     },
     {
-      number:'PL-2026-002', date:'2026-05-26', supplier:'Supplier Tekstil Bandung',
+      number:'PO-2026-002', date:'2026-05-26', supplier:'Supplier Tekstil Bandung',
       status:'In Transit', notes:'Napkin replenishment',
       lines:[
         { sku:'BLM-002', itemId:'BLM-002-CRM', productName:'Linen Napkin', itemName:'Linen Napkin — Cream', qty:35, unitCost:9000 },
@@ -333,8 +333,8 @@ const SANDBOX_SEED = {
     },
   ],
   stockIn: [
-    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Supplier Name':'Supplier Rattan Jakarta','Qty In':40,'Unit Cost (IDR)':22000,'Total Cost (IDR)':880000,'Type':'Restock' },
-    { Date:'2026-05-20','Reference ID':'PL-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Supplier Name':'Supplier Rattan Jakarta','Qty In':20,'Unit Cost (IDR)':22000,'Total Cost (IDR)':440000,'Type':'Restock' },
+    { Date:'2026-05-20','Reference ID':'PO-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-NAT','Supplier Name':'Supplier Rattan Jakarta','Qty In':40,'Unit Cost (IDR)':22000,'Total Cost (IDR)':880000,'Type':'Restock' },
+    { Date:'2026-05-20','Reference ID':'PO-2026-001','SKU ID':'BLM-001','Item ID':'BLM-001-DRK','Supplier Name':'Supplier Rattan Jakarta','Qty In':20,'Unit Cost (IDR)':22000,'Total Cost (IDR)':440000,'Type':'Restock' },
     { Date:'2026-05-20','Reference ID':'OPEN-2026-001','SKU ID':'BLM-002','Item ID':'BLM-002-CRM','Supplier Name':'Supplier Tekstil Bandung','Qty In':30,'Unit Cost (IDR)':9000,'Total Cost (IDR)':270000,'Type':'Initial Stock' },
   ],
   stockOut: [

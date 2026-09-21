@@ -171,7 +171,7 @@ function ledgerBuildRows() {
     movements.push({
       date: String(row.Date || ''),
       reference,
-      source: packingListNumbers.has(reference) ? 'Packing List Receipt' : 'Inbound',
+      source: packingListNumbers.has(reference) ? 'Purchase Order Receipt' : 'Inbound',
       sourcePage: packingListNumbers.has(reference) ? 'packinglists' : 'stockin',
       skuId: String(row['SKU ID'] || ''),
       itemId: String(row['Item ID'] || ''),
