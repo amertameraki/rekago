@@ -1,9 +1,9 @@
 <!-- stockin.html — loaded into #page-frame by index.html -->
 <main>
-  <div class="page-title">Stock In</div>
+  <div class="page-title">Inbound</div>
 
   <div class="form-section" id="stockInSection">
-    <div class="form-section-title">Record Stock In</div>
+    <div class="form-section-title">Record Inbound</div>
     <div class="form-grid form-grid-4">
       <div class="form-field">
         <label class="form-label">Date</label>
@@ -26,7 +26,7 @@
         <input class="form-input" id="siSupplier" placeholder="Supplier name">
       </div>
       <div class="form-field">
-        <label class="form-label">Qty In</label>
+        <label class="form-label">Inbound Qty</label>
         <input class="form-input" id="siQty" type="number" placeholder="0" min="1">
       </div>
       <div class="form-field">
@@ -47,7 +47,7 @@
       </div>
     </div>
     <div class="form-actions">
-      <button class="btn-primary" id="recordStockInButton" onclick="submitStockIn()">Record Stock In</button>
+      <button class="btn-primary" id="recordStockInButton" onclick="submitStockIn()">Record Inbound</button>
     </div>
   </div>
 
@@ -159,7 +159,7 @@ async function submitStockIn() {
     'Type': payload.type || 'Restock',
   });
   applySandboxStockDelta(payload.skuId, qtyNum);
-  showToast('Stock In recorded for this Sandbox session.');
+  showToast('Inbound recorded for this Sandbox session.');
   renderStockInTable();
 }
 </script>

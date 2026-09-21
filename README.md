@@ -43,8 +43,8 @@ is a separate HTML fragment loaded into `#page-frame`:
 
 Shared state is held in `REKAGO` inside `index.html`. Product and stock changes
 are cross-linked during the session. Packing List receipt creates matching
-Stock In rows and increases physical stock exactly once. The Inventory Ledger
-combines Stock In and Outbound lines, links them to their source workflow, and
+Inbound rows and increases physical stock exactly once. The Inventory Ledger
+combines Inbound and Outbound lines, links them to their source workflow, and
 reconciles their running balances to current physical stock. No browser action
 calls `backend/`.
 

@@ -496,7 +496,7 @@ function plReceive(number) {
   }
   if (!list.lines.length) { showToast(`${number} has no lines to receive.`, true); return; }
   if (REKAGO.stockIn.some(row => String(row['Reference ID'] || '').trim() === number)) {
-    showToast(`Stock In already contains ${number}; nothing was changed.`, true);
+    showToast(`Inbound already contains ${number}; nothing was changed.`, true);
     return;
   }
 
@@ -527,7 +527,7 @@ function plReceive(number) {
   }
 
   const totalQty = Object.values(qtyBySku).reduce((sum, qty) => sum + qty, 0);
-  if (!window.confirm(`Receive ${number} into Stock In? This will add ${totalQty} units to physical stock.`)) return;
+  if (!window.confirm(`Receive ${number} into Inbound? This will add ${totalQty} units to physical stock.`)) return;
 
   const receiptDate = new Date().toISOString().slice(0, 10);
   const stockRows = list.lines.map(line => ({

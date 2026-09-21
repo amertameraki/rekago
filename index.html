@@ -263,7 +263,7 @@ nav { background: var(--nav); display: flex; align-items: center; padding: 0 24p
       <button class="nav-tab" onclick="loadPage('products')">Products</button>
       <button class="nav-tab" onclick="loadPage('inventory')">Inventory</button>
       <button class="nav-tab" onclick="loadPage('packinglists')">Packing Lists</button>
-      <button class="nav-tab" onclick="loadPage('stockin')">Stock In</button>
+      <button class="nav-tab" onclick="loadPage('stockin')">Inbound</button>
       <button class="nav-tab" onclick="loadPage('stockout')">Outbound</button>
       <button class="nav-tab" onclick="loadPage('ledger')">Ledger</button>
     </div>
@@ -297,7 +297,7 @@ const REKAGO = {
 // in the public Sandbox across the app (dashboard/products/stock in/outbound),
 // just collected in one place so every page reads
 // consistent, cross-linked data once someone starts a sandbox session
-// (e.g. a product added on Products shows up in Stock In's dropdown).
+// (e.g. a product added on Products shows up in Inbound's dropdown).
 const SANDBOX_SEED = {
   // Stock held before the dated sample movements below. Keeping this baseline
   // fixed lets the ledger detect a stock change that has no matching movement.
@@ -616,7 +616,7 @@ const TOUR_STEPS = [
     pos:    'below',
   },
   {
-    title:  'Stock In & Outbound',
+    title:  'Inbound & Outbound',
     body:   'Record inbound deliveries and group sales, consignment transfers, or other stock movements under one outbound number.',
     target: () => document.querySelector('.nav-tab[onclick*="stockin"]'),
     pos:    'below',

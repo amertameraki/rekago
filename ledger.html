@@ -38,7 +38,7 @@
     </select>
     <select class="form-select ledger-filter" id="ledgerDirectionFilter" onchange="ledgerRender()">
       <option value="">All movements</option>
-      <option value="In">Stock In</option>
+      <option value="In">Inbound</option>
       <option value="Out">Outbound</option>
     </select>
     <button class="btn-secondary" onclick="ledgerClearFilters()">Clear filters</button>
@@ -167,15 +167,15 @@ function ledgerBuildRows() {
   const movements = [];
 
   REKAGO.stockIn.forEach((row, index) => {
-    const reference = String(row['Reference ID'] || '').trim() || 'Stock In';
+    const reference = String(row['Reference ID'] || '').trim() || 'Inbound';
     movements.push({
       date: String(row.Date || ''),
       reference,
-      source: packingListNumbers.has(reference) ? 'Packing List Receipt' : 'Stock In',
+      source: packingListNumbers.has(reference) ? 'Packing List Receipt' : 'Inbound',
       sourcePage: packingListNumbers.has(reference) ? 'packinglists' : 'stockin',
       skuId: String(row['SKU ID'] || ''),
       itemId: String(row['Item ID'] || ''),
-      movementType: String(row.Type || 'Stock In'),
+      movementType: String(row.Type || 'Inbound'),
       direction: 'In',
       quantity: Number(row['Qty In']) || 0,
       signedQuantity: Number(row['Qty In']) || 0,

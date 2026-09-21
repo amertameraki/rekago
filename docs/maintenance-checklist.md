@@ -10,17 +10,17 @@ The public runtime is browser-only. Before every public Preview deployment:
 
 - [ ] The app opens directly in editable Sandbox mode without sign-in.
 - [ ] Refreshing restores the fixed sample data.
-- [ ] Add Product, Stock In, multi-line Outbound, and Packing List actions work
+- [ ] Add Product, Inbound, multi-line Outbound, and Packing List actions work
       within the current session.
 - [ ] One outbound number can contain lines from different channels/orders;
       invalid or insufficient-stock batches make no stock changes.
-- [ ] Receiving an open Packing List creates one Stock In row per line,
+- [ ] Receiving an open Packing List creates one Inbound row per line,
       increases each SKU by the aggregate quantity exactly once, and survives
       page navigation.
-- [ ] The Inventory Ledger shows every Stock In and Outbound line once, its
+- [ ] The Inventory Ledger shows every Inbound and Outbound line once, its
       source reference, signed quantity, and resulting per-SKU balance.
 - [ ] The latest ledger balance for every SKU equals current physical stock
-      after manual Stock In, Packing List receipt, and multi-line Outbound.
+      after manual Inbound, Packing List receipt, and multi-line Outbound.
 - [ ] Ledger search, SKU/direction filters, clear action, and source navigation
       work without modifying inventory data.
 - [ ] Reset Sandbox cancellation preserves the session; confirmation reloads

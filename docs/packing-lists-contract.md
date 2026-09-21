@@ -1,5 +1,9 @@
 # Rekago Packing Lists — Functional Contract and Maintainer Guide
 
+> **Terminology:** The public interface calls incoming inventory **Inbound**.
+> Existing internal code, API actions, column names, and the Google Sheet tab
+> retain **Stock In** for compatibility.
+
 Status: the authenticated receive-to-stock contract is retained here as a
 reference implementation. The public Sandbox exercises a browser-only version
 with dummy data and does not call Google Apps Script. Real deployments and

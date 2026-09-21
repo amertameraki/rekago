@@ -11,10 +11,10 @@ not store a second editable copy of a movement.
 
 ## Sources
 
-Each `REKAGO.stockIn` line produces one positive ledger movement. A Stock In
-reference that matches a Received Packing List is labelled **Packing List
-Receipt** and traces to Packing Lists. Other inbound references trace to Stock
-In. References must not be reused across unrelated source transactions; the
+Each internal `REKAGO.stockIn` line produces one positive Inbound movement. An
+Inbound reference that matches a Received Packing List is labelled **Packing List
+Receipt** and traces to Packing Lists. Other inbound references trace to
+Inbound. References must not be reused across unrelated source transactions; the
 seeded Initial Stock row therefore uses `OPEN-2026-001`, not a Packing List
 number.
 
@@ -33,8 +33,8 @@ Every derived row contains:
 | Field | Meaning |
 |---|---|
 | Date | Movement date recorded by its source workflow |
-| Reference | Packing List, Stock In, or Outbound reference |
-| Source | `Packing List Receipt`, `Stock In`, or `Outbound` |
+| Reference | Packing List, Inbound, or Outbound reference |
+| Source | `Packing List Receipt`, `Inbound`, or `Outbound` |
 | SKU / Item | The affected product and item identifiers |
 | Movement Type | Source movement type such as Restock, Sale, or Consignment Transfer |
 | Change | Positive quantity for inbound; negative quantity for outbound |
@@ -56,17 +56,17 @@ sample movements. The seeded values are:
 
 Running balances begin at this fixed opening baseline. They are not calculated
 backward from current stock. This distinction matters: if code changes physical
-stock without recording a Stock In or Outbound line, the ledger shows a balance
+stock without recording an Inbound or Outbound line, the ledger shows a balance
 mismatch instead of silently hiding the missing movement.
 
 For every SKU, this invariant must hold:
 
 ```text
-opening stock + total Stock In - total Outbound = current physical stock
+opening stock + total Inbound - total Outbound = current physical stock
 ```
 
-Packing List receipt satisfies the invariant through its Stock In rows; those
-rows must not be duplicated as a second Packing List-only movement.
+Packing List receipt satisfies the invariant through its internal Stock In
+rows; those rows must not be duplicated as a second Packing List-only movement.
 
 ## Ordering
 
@@ -88,7 +88,7 @@ Before approving a change:
 
 1. Confirm the seeded six movement lines reconcile to BLM-001 `84`, BLM-002
    `56`, and BLM-003 `8`.
-2. Add manual Stock In and verify one positive ledger row and the new balance.
+2. Add manual Inbound and verify one positive ledger row and the new balance.
 3. Receive an open Packing List and verify one row per Packing List line, with
    source `Packing List Receipt` and no duplicate movement.
 4. Record a multi-line Outbound and verify one negative row per line.
